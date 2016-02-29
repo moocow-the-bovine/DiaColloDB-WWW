@@ -15,7 +15,15 @@
   src_d3 = 'http://d3js.org/d3.v3.min.js';
   src_d3cloud = 'd3.layout.cloud.js';
 %]
-
+[% IF diacollo_standalone %]  
+  <style type="text/css">
+.loading .icon { background: url("[% root_dir %]images/spinner-blue-32px.gif") !important; }
+.warning .icon { background: url("[% root_dir %]images/warning-32px.png") !important; }
+.warning.loading .icon { background: url("[% root_dir %]images/spinner-orange-32px.gif") !important; }
+.error .icon { background: url("[% root_dir %]images/error-32px.png") !important; }
+.info .icon { background: url("[% root_dir %]images/info-32px.png") !important; }
+  </style>
+[% END %]
 [% IF qformat == "gmotion" %]
  [%#-- load google motion chart API %]
  <script type="text/javascript" src="https://www.google.com/jsapi"></script>

@@ -12,7 +12,10 @@
 [% END %]
 
 [% PERL %]
-  $stash->set(VERSION=>$DiaColloDB::WWW::VERSION);
+  $stash->set(DIACOLLO_VERSION=>$DiaColloDB::VERSION);
+  $stash->set(DIACOLLO_WWW_CLASS=>ref($stash->get('cdb')));
+  $stash->set(DIACOLLO_WWW_VERSION=>$stash->get('version'));
+  #$stash->set(VERSION=>$stash->get('version'));
   #print STDERR "root='", $stash->get('root_dir'), "; diacollo_standalone=", $stash->get('diacollo_standalone'), "\n";
 [% END %]
 

@@ -165,10 +165,10 @@
 	<div id="profileDataChart" style="display:none;"></div>
 	<div id="profileDataD3" style="display:none;">
 	  <div id="d3icons">
-	    <a id="export" title="Download current data display as SVG image"><img src="../images/download-24px.png"/></a>
+	    <a id="export" title="Download current data display as SVG image"><img src="[% root_dir %]images/download-24px.png"/></a>
 	    <a id="kbicon">
-	      <img src="../images/keyboard-24px.png"/>
-	      <img id="kbiconx" src="../images/redx-20px.png"/>
+	      <img src="[% root_dir %]images/keyboard-24px.png"/>
+	      <img id="kbiconx" src="[% root_dir %]images/redx-20px.png"/>
 	    </a>
 	    <a id="curspeed" title="Current playback speed (double-click to reset; (shift+)up/down arrow, (shift+)number key to change)">1x</a>
 	  </div>

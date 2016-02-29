@@ -605,7 +605,7 @@
 		  the basic problem of uninteresting high-frequency collocates (e.g. &quot;Herr&quot;) remains for raw frequency
 		  rankings.
 		</td>
-		<td><a href="../images/diacollo-plots/score-f.png"><img class="funcPlot" src="../images/diacollo-plots/score-f.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/score-f.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/score-f.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -615,7 +615,7 @@
 		  <span class="math">$score$subfm = 1000000 * $f12 / $N</span>.
 		  This is just a linear normalized variant of <a href="#score-f">raw collocation frequency</a>.
 		</td>
-		<td><a href="../images/diacollo-plots/score-fm.png"><img class="funcPlot" src="../images/diacollo-plots/score-fm.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/score-fm.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/score-fm.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -625,7 +625,7 @@
 		  <span class="math">$score$sublf = $log2($f12 + $eps)</span>.
 		  This is just a logarithmic variant of <a href="#score-f">raw collocation frequency</a>.
 		</td>
-		<td><a href="../images/diacollo-plots/score-lf.png"><img class="funcPlot" src="../images/diacollo-plots/score-lf.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/score-lf.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/score-lf.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -635,7 +635,7 @@
 		  <span class="math">$score$sublfm = $log2(1000000 * ($f12+$eps) / ($N+$eps))</span>.
 		  This is just a logarithmic variant of the <a href="#score-fm">normalized collocation frequency</a>.
 		</td>
-		<td><a href="../images/diacollo-plots/score-lfm.png"><img class="funcPlot" src="../images/diacollo-plots/score-lfm.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/score-lfm.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/score-lfm.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -652,7 +652,7 @@
 		  Multiplying the raw PMI by the log-frequency of the collocation pair is a <i>post-hoc</i> attempt
 		  to ameliorate this problem, but experience shows that this strategy is not always successful.
 		</td>
-		<td><a href="../images/diacollo-plots/score-mi.png"><img class="funcPlot" src="../images/diacollo-plots/score-mi.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/score-mi.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/score-mi.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -664,7 +664,7 @@
 		  Heuristic score function investigated by both <a href="#evert2004">Evert (2004)</a> and <a href="#rychly2008">Rychlý (2008)</a>,
 		  attributed to <a href="#daille1994">Daille (1994)</a>.
 		</td>
-		<td><a href="../images/diacollo-plots/score-mi3.png"><img class="funcPlot" src="../images/diacollo-plots/score-mi3.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/score-mi3.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/score-mi3.png"/></a></td>
 	      </tr>
 	   
 	      <tr>
@@ -682,7 +682,7 @@
 		  <a href="#didakowski2013">Didakowski &amp; Geyken (2013)</a>,
 		  and is also currently the default score function for the DiaCollo web front-end.
 		</td>
-		<td><a href="../images/diacollo-plots/score-ld.png"><img class="funcPlot" src="../images/diacollo-plots/score-ld.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/score-ld.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/score-ld.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -714,7 +714,7 @@
 		  <span class="math">$log(1 + $log $lambda)</span>.
 		  Values are unbounded, but are typically in the range <span class="math">[-10:10]</span>.
 		</td>
-		<td><a href="../images/diacollo-plots/score-ll.png"><img class="funcPlot" src="../images/diacollo-plots/score-ll.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/score-ll.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/score-ll.png"/></a></td>
 	      </tr>
 	    </table>
 	  </p>
@@ -820,7 +820,7 @@
 		  <span class="math">$diff$subdiff($xa,$xb) = $xa-$xb</span>.
 		  Useful for selecting collocates strongly associated only with <a href="#query">$qa</a>.
 		</td>
-		<td><a href="../images/diacollo-plots/diff-diff.png"><img class="funcPlot" src="../images/diacollo-plots/diff-diff.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-diff.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-diff.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -836,7 +836,7 @@
 		  the the direction those differences, which itself is expressed as the sign
 		  of the returned diff score.
 		</td>
-		<td><a href="../images/diacollo-plots/diff-adiff.png"><img class="funcPlot" src="../images/diacollo-plots/diff-adiff.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-adiff.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-adiff.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -852,7 +852,7 @@
 		  of the associated collocates).
 		  Returned rankings are equivalent to the <a href="#diff-avg">avg</a> operation.
 		</td>
-		<td><a href="../images/diacollo-plots/diff-sum.png"><img class="funcPlot" src="../images/diacollo-plots/diff-sum.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-sum.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-sum.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -865,7 +865,7 @@
 		  Highly sensitive to sparse data problems, since missing data
 		  are assigned scores of 0 (zero).
 		</td>
-		<td><a href="../images/diacollo-plots/diff-min.png"><img class="funcPlot" src="../images/diacollo-plots/diff-min.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-min.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-min.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -877,7 +877,7 @@
 		  Potentially useful for discovering interesting target collocations
 		  for further investigation.
 		</td>
-		<td><a href="../images/diacollo-plots/diff-max.png"><img class="funcPlot" src="../images/diacollo-plots/diff-max.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-max.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-max.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -889,7 +889,7 @@
 		  to which the returned rankings are equivalent,
 		  although values are more immediately comparable to those returned for unary profiles.
 		</td>
-		<td><a href="../images/diacollo-plots/diff-avg.png"><img class="funcPlot" src="../images/diacollo-plots/diff-avg.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-avg.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-avg.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -926,7 +926,7 @@
 		    </tr>
 		  </table>
 		</td>
-		<td><a href="../images/diacollo-plots/diff-havg.png"><img class="funcPlot" src="../images/diacollo-plots/diff-havg.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-havg.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-havg.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -942,7 +942,7 @@
 		  of the geometric and the raw arithmetic means, analogous to
 		  the method used to compute the <a href="#diff-havg">havg</a> diff score.
 		</td>
-		<td><a href="../images/diacollo-plots/diff-gavg.png"><img class="funcPlot" src="../images/diacollo-plots/diff-gavg.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-gavg.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-gavg.png"/></a></td>
 	      </tr>
 
 	      <tr>
@@ -977,7 +977,7 @@
 		    </tr>
 		  </table>
 		</td>
-		<td><a href="../images/diacollo-plots/diff-lavg.png"><img class="funcPlot" src="../images/diacollo-plots/diff-lavg.png"/></a></td>
+		<td><a href="[% root_dir %]images/diacollo-plots/diff-lavg.png"><img class="funcPlot" src="[% root_dir %]images/diacollo-plots/diff-lavg.png"/></a></td>
 	      </tr>
 	    </table>
 
@@ -1194,7 +1194,7 @@
 	  (<a href="#fmt-bubble">bubble</a>, <a href="#fmt-cloud">cloud</a>)
 	  support the following keyboard shortcuts whenever the display canvas has the keyboard focus
 	  (as indicated by a drop-shadow around the canvas itself as well as the
-	  <img src="../images/keyboard-24px.png" style="height:1em" alt="keyboard icon"/> icon in the header area):
+	  <img src="[% root_dir %]images/keyboard-24px.png" style="height:1em" alt="keyboard icon"/> icon in the header area):
 	  <p/>
 	  <center>
 	    <table class="dbViewTable keysTable">

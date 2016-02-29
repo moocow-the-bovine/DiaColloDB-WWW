@@ -7,8 +7,8 @@
     html_title = root_title
     
     src_jquery = diacollo_standalone ? "http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.js" : (root_dir _ "jquery.js")
-    src_jquery_ui = diacollo_standalone ? "http://https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js" : (root_dir _ "jquery-ui.js")
-    css_jquery_ui = diacollo_standalone ? "https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css" : (root_dir _ "jquery-ui.css")
+    src_jquery_ui = diacollo_standalone ? "http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js" : (root_dir _ "jquery-ui.js")
+    css_jquery_ui = diacollo_standalone ? "http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css" : (root_dir _ "jquery-ui.css")
     src_purl = root_dir _ "purl.js"
     src_dstar = root_dir _ "dstar.js"
 -%]
