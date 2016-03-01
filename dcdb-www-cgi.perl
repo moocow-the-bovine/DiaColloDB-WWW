@@ -12,5 +12,33 @@ BEGIN {
   binmode(STDERR,':utf8');
 }
 
+##----------------------------------------------------------------------
+## local config
+
+our $prog    = basename($0);
+our $progdir = abs_path(".");
+
+##-- BEGIN dstar config
+our %dstar = qw();
+foreach my $rcfile (map {"$_/dstar.rc"} "$progdir","$progdir/..") {
+  if (-r $rcfile) {
+    do "$rcfile" or die("$prog: failed to load dstar config file '$rcfile': $@");
+    last;
+  }
+}
+##-- END dstar config
+
+##-- BEGIN dstar local
+foreach my $rcfile (map {"$_/dstar.rc"} "$progdir","$progdir/..") {
+  if (-r $rcfile) {
+    do "$rcfile" or die("$prog: failed to load local config file '$rcfile': $@");
+    last;
+  }
+}
+##-- END dstar local config
+
+##----------------------------------------------------------------------
+## dbcgi guts
+
 my $dbcgi = DiaColloDB::WWW::CGI->new();
-$dbcgi->cgi_main();
+$dbcgi->cgi_main(ttk_vars=>{dstar=>\%dstar});
