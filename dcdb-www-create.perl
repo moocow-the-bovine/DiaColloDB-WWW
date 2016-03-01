@@ -120,6 +120,15 @@ $logger->info("setting permissions on $wwwdir");
 chmod_recursive('u+w',$wwwdir)
   or $logger->logdie("failed to update permissions on $wwwdir: $!");
 
+##-- link in 'data' directory
+my $dbdir_abs = abs_path($dbdir);
+$logger->info("linking $wwwdir/data to $dbdir_abs");
+!-e "$wwwdir/data"
+  or unlink("$wwwdir/data")
+  or $logger->logdie("failed to unlink stale $wwwdir/data: $!");
+symlink($dbdir_abs,"$wwwdir/data")
+  or $logger->logdie("failed to create symlink $wwwdir/data -> $dbdir_abs: $!");
+
 ##-- create site.rc
 if ($want_siterc) {
   $logger->info("creating $wwwdir/site.rc");
@@ -131,18 +140,18 @@ if ($want_siterc) {
     or $logger->logdie("$0: open failed for $wwwdir/site.rc: $!");
   $fh->print($data);
   CORE::close($fh);
+  print STDERR "$prog: $_\n"
+    foreach ("==================================================",
+	     "created apache configuration file $wwwdir/site.rc",
+	     "",
+	     "remember to add $wwwdir/site.rc to your apache",
+	     "site configuration and re-load the server config!",
+	     "=================================================="
+	    );
 } else {
-  $logger->info("NOT creating site.rc (disabled by user request)");
+  $logger->info("NOT creating apache site configuration $wwwdir/site.rc (disabled by user request)");
 }
 
-##-- link in 'data' directory
-my $dbdir_abs = abs_path($dbdir);
-$logger->info("linking $wwwdir/data to $dbdir_abs");
-!-e "$wwwdir/data"
-  or unlink("$wwwdir/data")
-  or $logger->logdie("failed to unlink stale $wwwdir/data: $!");
-symlink($dbdir_abs,"$wwwdir/data")
-  or $logger->logdie("failed to create symlink $wwwdir/data -> $dbdir_abs: $!");
 
 __END__
 
@@ -169,10 +178,16 @@ dcdb-www-create.perl - instantiate apache www wrappers for a DiaColloDB index
    -local-rc RCFILE      # instantiates WWWDIR/local.rc (default:none)
    -corpus-ttk TTKFILE   # instantiates WWWDIR/dstar/corpus.ttk (default:none)
    -custom-ttk TTKFILE   # instantiates WWWDIR/dstar/custom.ttk (default:none)
+   -[no]site-rc          # do/don't create apache configuration in WWWDIR/site.rc (default:do)
+   -site-alias ALIAS     # server path alias for WWWDIR/site.rc (default=/WWWDIR)
 
  Output Options:
    -[no]force            # do/don't force-overwrite existing WWWDIR (default=don't)
    -output WWWDIR        # create wrapper directory WWWDIR (default=DBDIR.www)
+
+ Caveats:
+   + you will need to update and reload your apache server configuration after
+     adding or changing any site-wide aliases!
 
 =cut
 
@@ -212,17 +227,65 @@ Set verbosity level to LEVEL.  Default=1.
 
 
 ###############################################################
-# Other Options
+# Customization Options
 ###############################################################
 =pod
 
-=head2 Other Options
+=head2 Customization Options
 
 =over 4
 
-=item -someoptions ARG
+=item -dstar-rc RCFILE
 
-Example option.
+Install a user-specified C<RCFILE> as F<WWWDIR/dstar.rc>
+(perl format, base configuration).
+
+=item -local-rc RCFILE
+
+Install a user-specified C<RCFILE> as F<WWWDIR/local.rc>
+(perl format, overrides).
+
+=item -corpus-ttk TTKFILE
+
+Install a user-specified C<TTKFILE> as F<WWWDIR/dstar/corpus.ttk>
+(Template Toolkit format, base configuration).
+
+=item -custom-ttk TTKFILE
+
+Install a user-specified C<TTKFILE> as F<WWWDIR/dstar/custom.ttk>
+(Template Toolkit format, overrides).
+
+=item -site-rc , -nosite-rc
+
+Do/don't create an apache site configuration stub in F<WWWDIR/site.rc>.
+Default=do.
+
+=item -site-alias ALIAS
+
+Server path alias for F<WWWDIR/site.rc>,
+Default=F</WWWDIR> (basename only).
+
+=back
+
+=cut
+
+###############################################################
+# I/O Options
+###############################################################
+=pod
+
+=head2 I/O Options
+
+=over 4
+
+=item -[no]force
+
+Do/don't force-overwrite an existing output directory (default=don't).
+
+=item -output WWWDIR
+
+Specify wrapper output directory F<WWWDIR>.
+Default=F<DBDIR.www>.
 
 =back
 
