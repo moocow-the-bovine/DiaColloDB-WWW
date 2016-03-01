@@ -1,6 +1,7 @@
 ~$
 ^MANIFEST\.SKIP$
 ^reversion\.sh$
+^dstar-
 ^kant\b
 ^kern\b
 ^MYMETA\.
@@ -20,5 +21,6 @@
 \.out$
 \.o$
 ^test\b
+^test[0-9]
 \.save\b
-
+\.save[0-9]
