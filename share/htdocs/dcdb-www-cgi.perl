@@ -40,7 +40,7 @@ foreach my $rcfile (map {"$_/dstar.rc"} "$progdir","$progdir/..") {
 ##-- END dstar local config
 
 ##-- BEGIN dstar diacollo standalone fallbacks
-$dstar{corpus} = basename($progdir);
+$dstar{corpus} = basename($progdir) if (!defined($dstar{corpus}));
 ##-- END dstar diacollo standalone fallbacks
 
 ##----------------------------------------------------------------------

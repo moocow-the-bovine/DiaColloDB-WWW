@@ -14,6 +14,7 @@ use URI::Escape qw(uri_escape_utf8);
 use HTTP::Status;
 use Encode qw(); #qw(encode decode encode_utf8 decode_utf8);
 use File::Basename qw(basename dirname);
+use File::ShareDir qw(); ##-- for shared template data
 use Cwd qw(getcwd abs_path);
 #use LWP::UserAgent;
 use Template;
@@ -46,39 +47,42 @@ sub new {
   my $that = shift;
   my $dbcgi = bless({
 		   ##-- basic stuff
-		   prog => basename($0),
-		   ##
-		   ##-- underlying CGI module
-		   cgipkg => 'CGI',
-		   ##
-		   ##-- CGI params
-		   defaults => {},
-		   vars     => undef,
-		   charset  => 'utf-8',
-		   nodecode => {},  ##-- vars not to decode
-		   ##
-		   ##-- CGI environment stuff : see getenv() method
-		   remote_addr => undef,
-		   remote_user => undef,
-		   request_method => undef,
-		   request_uri => undef,
-		   request_query => undef,
-		   http_referer => undef,
-		   http_host    => undef,
-		   server_addr  => undef,
-		   server_port  => undef,
-		   ##
-		   ##-- template toolkit stuff
-		   ttk_package => (ref($that)||$that),
-		   ttk_vars    => {},                   ##-- template vars
-		   ttk_config  => {ENCODING=>'utf8'},	##-- options for Template->new()
-		   ttk_process => {binmode=>':utf8'},	##-- options for Template->process()
-		   ttk_dir     => abs_path(dirname($0)),
-		   ttk_key     => undef, ##-- template basename
-		   ##
-		   ##-- user args
-		   @_,
-		  }, ref($that)||$that);
+		     prog => basename($0),
+		     ##
+		     ##-- underlying CGI module
+		     cgipkg => 'CGI',
+		     ##
+		     ##-- CGI params
+		     defaults => {},
+		     vars     => undef,
+		     charset  => 'utf-8',
+		     nodecode => {}, ##-- vars not to decode
+		     ##
+		     ##-- CGI environment stuff : see getenv() method
+		     remote_addr => undef,
+		     remote_user => undef,
+		     request_method => undef,
+		     request_uri => undef,
+		     request_query => undef,
+		     http_referer => undef,
+		     http_host    => undef,
+		     server_addr  => undef,
+		     server_port  => undef,
+		     ##
+		     ##-- template toolkit stuff
+		     ttk_package => (ref($that)||$that),
+		     ttk_vars    => {},			##-- template vars
+		     ttk_config  => {ENCODING=>'utf8'},	##-- options for Template->new()
+		     ttk_process => {binmode=>':utf8'},	##-- options for Template->process()
+		     ttk_dir     => abs_path(dirname($0)),
+		     ttk_key     => undef,		##-- template basename
+		     ##
+		     ##-- File::ShareDir stuff (fallbacks for ttk_dir)
+		     ttk_sharedir => File::ShareDir::dist_dir("DiaColloDB-WWW")."/htdocs",
+		     ##
+		     ##-- user args
+		     @_,
+		    }, ref($that)||$that);
 
   ##-- CGI package
   if ($dbcgi->{cgipkg}) {
@@ -191,14 +195,30 @@ sub ttk_key {
   return $key;
 }
 
+## @paths = $dbcgi->ttk_include()
+## $paths = $dbcgi->ttk_include()
+##  + returns ttk search path @$dbcgi->{qw(ttk_dir ttk_sharedir)}
+##  + in scalar context returns ":"-separated list
+sub ttk_include {
+  my $dbcgi = shift;
+  my @dirs = map {s/\/+\z//; abs_path($_)} grep {defined($_) && $_ ne ''} @$dbcgi{qw(ttk_dir ttk_sharedir)};
+  return wantarray ? @dirs : join(":",@dirs);
+}
+
 ## $file = $dbcgi->ttk_file()
 ## $file = $dbcgi->ttk_file($key)
 ##  + returns template filename for template key (basename) $key
 ##  + $key defaults to $dbcgi->{prog} without final extension
+##  + searches in $dbcgi->{ttk_dir} or $dbcgi->{ttk_sharedir}
 sub ttk_file {
   my ($dbcgi,$key) = @_;
   (my $dir = $dbcgi->{ttk_dir} || '.') =~ s/\/+\z//;
-  return abs_path($dir)."/".$dbcgi->ttk_key($key).".ttk";
+  my $file = $dbcgi->ttk_key($key).".ttk";
+  my @dirs = $dbcgi->ttk_include();
+  foreach (@dirs) {
+    return "$_/$file" if (-f "$_/$file");
+  }
+  $dbcgi->logconfess("ttk_file(): could not find template file '$file' in ttk search path ".$dbcgi->ttk_include);
 }
 
 ## $t = $dbcgi->ttk_template(\%templateConfigArgs)
@@ -212,6 +232,7 @@ sub ttk_template {
 			EVAL_PERL=>1,
 			ABSOLUTE=>1,
 			RELATIVE=>1,
+			INCLUDE_PATH =>scalar($dbcgi->ttk_include),
 			%{$dbcgi->{ttk_config}||{}},
 			%{$targs||{}},
 		       );
