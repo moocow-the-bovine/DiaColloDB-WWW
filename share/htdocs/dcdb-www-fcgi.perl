@@ -40,5 +40,5 @@ foreach my $rcfile (map {"$_/dstar.rc"} "$progdir","$progdir/..") {
 ##----------------------------------------------------------------------
 ## dbcgi guts
 
-my $dbcgi = DiaColloDB::WWW::CGI->new();
-$dbcgi->fcgi_main(ttk_vars=>{dstar=>\%dstar});
+my $dbcgi = DiaColloDB::WWW::CGI->new(ttk_vars=>{dstar=>\%dstar});
+$dbcgi->fcgi_main();

@@ -3,6 +3,8 @@
 
 use lib qw(. lib dclib dclib/blib/lib dclib/blib/arch);
 use DiaColloDB::WWW::CGI;
+use File::Basename qw(basename);
+use Cwd qw(abs_path);
 use utf8;
 use strict;
 #use CGI '-debug';
@@ -40,5 +42,5 @@ foreach my $rcfile (map {"$_/dstar.rc"} "$progdir","$progdir/..") {
 ##----------------------------------------------------------------------
 ## dbcgi guts
 
-my $dbcgi = DiaColloDB::WWW::CGI->new();
-$dbcgi->cgi_main(ttk_vars=>{dstar=>\%dstar});
+my $dbcgi = DiaColloDB::WWW::CGI->new(ttk_vars=>{dstar=>\%dstar});
+$dbcgi->cgi_main();
