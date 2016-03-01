@@ -37,6 +37,10 @@ foreach my $rcfile (map {"$_/dstar.rc"} "$progdir","$progdir/..") {
 }
 ##-- END dstar local config
 
+##-- BEGIN dstar diacollo standalone fallbacks
+$dstar{corpus} = basename($progdir);
+##-- END dstar diacollo standalone fallbacks
+
 ##----------------------------------------------------------------------
 ## dbcgi guts
 
