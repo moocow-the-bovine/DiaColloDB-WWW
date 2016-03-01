@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 ##----------------------------------------------------------------------
 ## shared data
 use File::ShareDir::Install;
-install_share module=>'DiaColloDB::WWW', 'share';
+install_share dist=>'share';
 
 ##----------------------------------------------------------------------
 ## MAIN
