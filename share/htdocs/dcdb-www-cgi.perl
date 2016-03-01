@@ -1,1 +1,1 @@
-../dcdb-www-cgi.perl
+../../dcdb-www-cgi.perl
