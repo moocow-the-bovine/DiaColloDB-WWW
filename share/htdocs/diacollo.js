@@ -1,1 +1,1 @@
-../../dstar-web-diacollo/diacollo.js
+../../dstar-web/diacollo/diacollo.js

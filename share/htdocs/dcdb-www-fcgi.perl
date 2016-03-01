@@ -1,1 +1,1 @@
-../../dstar-web-diacollo/dcdb-www-fcgi.perl
+../../dstar-web/diacollo/dcdb-www-fcgi.perl
