@@ -24,6 +24,8 @@ WriteMakefile
 		    'Encode' => 0,
 		    'HTTP::Message' => 0, ##-- 6.06,
 		    'File::ShareDir' => 0, ##-- 1.102
+		    'File::Copy::Recursive' => 0, ##-- 0.38
+		    'File::chmod::Recursive' => 0, ##-- 1.0.3
 		    'Template' => 0,
 		    'Time::HiRes' => 0,
 		    'URI' => 0,
