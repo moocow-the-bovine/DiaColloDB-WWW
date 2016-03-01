@@ -1,0 +1,49 @@
+=pod
+
+README for DiaColloDB::WWW
+
+=head1 ABSTRACT
+
+DiaColloDB::WWW - www wrapper scripts and utitilties for DiaColloDB diachronic collocation database
+
+
+=head1 REQUIREMENTS
+
+=over 4
+
+=item DiaColloDB
+
+For low-level index access,
+available from CPAN.
+
+=item (an existing DiaColloDB index to query)
+
+See L<dcdb-create.perl(1)|dcdb-create.perl>
+from the L<DiaColloDB|DiaColloDB> distribution
+for details.
+
+=back
+
+
+=head1 DESCRIPTION
+
+The DiaColloDB::WWW package provides a set of Perl modules
+and wrapper scripts implementing a simple webservice API
+for L<DiaColloDB|DiaColloDB> indices, including a simple
+user interface and online visualization.
+
+=head1 INSTALLATION
+
+Issue the following commands to the shell:
+
+ bash$ cd DiaColloDB-WWW-0.01 # (or wherever you unpacked this distribution)
+ bash$ perl Makefile.PL       # check requirements, etc.
+ bash$ make                   # build the module
+ bash$ make test              # (optional): test module before installing
+ bash$ make install           # install the module on your system
+
+=head1 AUTHOR
+
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
+
+=cut

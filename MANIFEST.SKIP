@@ -1,4 +1,5 @@
 ~$
+^MANIFEST\.SKIP$
 ^reversion\.sh$
 ^kant\b
 ^kern\b
@@ -19,3 +20,5 @@
 \.out$
 \.o$
 ^test\b
+\.save\b
+

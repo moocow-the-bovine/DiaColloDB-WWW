@@ -1,0 +1,6 @@
+##-*- Mode: Change-Log; coding: utf-8; -*-
+##
+## Change log for perl distribution DiaColloDB::WWW
+
+v0.01.001 Tue, 01 Mar 2016 12:13:16 +0100 moocow
+	* initial version
