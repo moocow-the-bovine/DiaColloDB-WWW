@@ -11,7 +11,7 @@
   [% END %]
 </div>
 <span class="elapsed">[% elapsed() |html %]&#xa0;sec</span>
-<span class="package">DiaColloDB v[% DIACOLLO_VERSION %] / DiaColloDB::WWW v[% DIACOLLO_WWW_VERSION %]</span>
+<span class="package">[% IF foot_package_text %][% foot_package_text %][% ELSE %][% gen_label |html %] version [% VERSION |html %][% END %]</span>
 [%#--
   # Local Variables:
   # mode: nxml
