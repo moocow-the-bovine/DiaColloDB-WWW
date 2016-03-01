@@ -5,7 +5,7 @@
   # globals
   PROCESS "dc-common.ttk"
 %]
-[% SET html_title = root_title _ ": DiaCollo" %]
+[% SET html_title = diacollo_standalone ? ("DiaCollo / " _ root_title) : (root_title _ ": DiaCollo") %]
 [% END FILTER null %]
 [% cdb.cgi('header','-type'=>'text/html') %]
 <?xml version="1.0" encoding="UTF-8"?>

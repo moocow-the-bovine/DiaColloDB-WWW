@@ -9,7 +9,7 @@
   # config: top-level
   # %]
 [% SET
-   html_title = root_title _ ": DiaCollo Help";
+   html_title = diacollo_standalone ? ("DiaCollo Help / " _ root_title) : (root_title _ ": DiaCollo Help")
    dc_link_dchome = 1;
    dc_link_info   = 0;
    dc_link_help   = 0;
