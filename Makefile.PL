@@ -2,6 +2,11 @@
 use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
+## shared data
+use File::ShareDir::Install;
+install_share module=>'DiaColloDB::WWW', 'share';
+
+##----------------------------------------------------------------------
 ## MAIN
 ##----------------------------------------------------------------------
 WriteMakefile
@@ -17,12 +22,17 @@ WriteMakefile
 		    'Cwd' => 0,
 		    #'CGI::Fast' => 0,
 		    'Encode' => 0,
-		    'HTTP::Message' => 0, ##-- 6.06, 
+		    'HTTP::Message' => 0, ##-- 6.06,
+		    'File::ShareDir' => 0, ##-- 1.102
 		    'Template' => 0,
 		    'Time::HiRes' => 0,
 		    'URI' => 0,
 		    'URI::Escape' => 0,
 		   },
+   CONFIGURE_REQUIRES => {
+			  'ExtUtils::MakeMaker' => 6.52,  ##-- for CONFIGURE_REQUIRES
+			  'File::ShareDir::Install' => 0, ##-- 0.09
+			 },
 
 
    EXE_FILES => [ glob('dcdb-*.perl'), ],
@@ -253,8 +263,10 @@ $(PMLIST_AM): $(TO_INST_PM)
 }
 
 ##---------------------------------------------------------------
+use File::ShareDir::Install;
 sub MY::postamble {
   package MY;
-  my $inherited = shift->SUPER::postamble(@_);
+  my $self = shift;
+  my $inherited = $self->SUPER::postamble(@_).join("\n",$self->File::ShareDir::Install::postamble(@_));
   return $inherited;
 }
