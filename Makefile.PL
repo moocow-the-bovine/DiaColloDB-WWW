@@ -22,10 +22,14 @@ WriteMakefile
 		    'Cwd' => 0,
 		    #'CGI::Fast' => 0,
 		    'Encode' => 0,
-		    'HTTP::Message' => 0, ##-- 6.06,
-		    'File::ShareDir' => 0, ##-- 1.102
+		    'HTTP::Message' => 0, ##-- 6.06
+		    'HTTP::Daemon'  => 0, ##-- 6.01
 		    'File::Copy::Recursive' => 0, ##-- 0.38
 		    'File::chmod::Recursive' => 0, ##-- 1.0.3
+		    'File::ShareDir' => 0, ##-- 1.102
+		    'File::MimeInfo' => 0, ##-- 0.26
+		    'POSIX' => 0,
+		    'Socket' => 0,
 		    'Template' => 0,
 		    'Time::HiRes' => 0,
 		    'URI' => 0,

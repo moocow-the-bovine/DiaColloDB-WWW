@@ -1,0 +1,247 @@
+#!/usr/bin/perl -w
+
+use lib qw(. lib blib/lib lib/lib lib/blib/lib);
+use DiaColloDB::WWW;
+use DiaColloDB::WWW::Server;
+use File::Basename qw(basename);
+use Getopt::Long qw(:config no_ignore_case);
+use Cwd qw(getcwd abs_path);
+use Socket qw(SOMAXCONN);
+use Pod::Usage;
+use strict;
+
+##==============================================================================
+## Constants & Globals
+##==============================================================================
+
+##-- program identity
+our $prog = basename($0);
+
+##-- General Options
+our ($help,$man,$version);
+our $verbose = 'INFO';   ##-- default log level
+
+##-- logging
+our %log = (level=>'INFO', rootLevel=>'FATAL');
+our %srv = (wwwdir=>undef,
+	    daemonArgs=>{LocalAddr=>'127.0.0.1', LocalPort=>6066,ReuseAddr=>1},
+	   );
+
+##==============================================================================
+## Command-line
+GetOptions(##-- General
+	   'help|h'    => \$help,
+	   'man|m'     => \$man,
+	   'version|V' => \$version,
+
+	   ##-- Server configuration
+	   'addr|a|bind|b|host=s'   => \$srv{daemonArgs}{LocalAddr},
+	   'port|p=i'   => \$srv{daemonArgs}{LocalPort},
+
+	   ##-- logging stuff
+	   'log-level|level|ll=s' => sub { $log{level} = uc($_[1]); },
+	   'log-option|logopt|lo=s' => \%log,
+	  );
+
+if ($version) {
+  print STDERR "$prog version $DiaColloDB::WWW::VERSION by Bryan Jurish\n";
+  exit 0 if ($version);
+}
+pod2usage({-exitval=>0, -verbose=>0}) if ($help);
+pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBDIR specified!"}) if (@ARGV < 1);
+
+##==============================================================================
+## MAIN
+##==============================================================================
+
+##-- setup logger
+DiaColloDB::Logger->ensureLog(%log);
+
+##-- get dbdir
+my $dbdir = $srv{dbdir} = shift(@ARGV);
+die("$0: cannot access DBDIR $dbdir") if (!-d $dbdir);
+
+##-- create / load server object
+my $srv = DiaColloDB::WWW::Server->new(%srv)
+  or die("$0: failed to create DiaColloDB::WWW::Server object");
+
+##-- serverMain(): main post-preparation code; run in subprocess if we're in daemon mode
+my $dargs = $srv->{daemonArgs} || {};
+sub serverMain {
+  ##-- prepare & run server
+  $srv->info("serverMain(): initializing server $dargs->{LocalAddr}:$dargs->{LocalPort}");
+  $srv->info("serverMain(): using DiaColloDB::WWW::Server version $DiaColloDB::WWW::Server::VERSION");
+  #$srv->info("serverMain(): CWD ", abs_path(getcwd));
+  $srv->prepare()
+    or $srv->logdie("prepare() failed!");
+  $srv->run();
+  $srv->finish();
+  $srv->info("exiting");
+}
+
+##-- check whether we can really bind the socket
+my $sock = IO::Socket::INET->new(%$dargs, Listen=>SOMAXCONN)
+  or $srv->logdie("cannot bind socket $dargs->{LocalAddr}:$dargs->{LocalPort}: $!");
+undef $sock;
+
+##-- just run server in serial mode
+serverMain();
+
+__END__
+=pod
+
+=head1 NAME
+
+dcdb-www-server.perl - standalone HTTP server for DiaColloDB indices
+
+=head1 SYNOPSIS
+
+ dcdb-www-server.perl [OPTIONS...] DBDIR
+
+ General Options:
+  -help                           ##-- show short usage summary
+  -man                            ##-- show longer help message
+  -version                        ##-- show version & exit
+  -verbose LEVEL                  ##-- really just an alias for -log-level=LEVEL
+
+ Server Configuration Options:
+  -bind HOST                      ##-- override host to bind (default=127.0.0.1)
+  -port PORT                      ##-- override port to bind (default=6066)
+
+ Logging Options:                 ##-- see Log::Log4perl(3pm)
+  -log-level LEVEL                ##-- set minimum log level (internal config only)
+  -log-option OPT=VALUE           ##-- set any logging option (e.g. -log-option file=server.log)
+
+=cut
+
+##==============================================================================
+## Description
+##==============================================================================
+=pod
+
+=head1 DESCRIPTION
+
+dcdb-www-server.perl is a command-line utility for starting
+a standalone HTTP server to provide a L<DiaColloDB|DiaColloDB> web-service
+and HTTP-based user interface
+using the L<DiaColloDB::WWW::Server|DiaColloDB::WWW::Server> module.
+After successful startup, point your browser at F<http://HOST:PORT>
+(by default L<http://127.0.0.1:6066>) to use.
+
+=cut
+
+##==============================================================================
+## Options and Arguments
+##==============================================================================
+=pod
+
+=head1 OPTIONS AND ARGUMENTS
+
+=cut
+
+##==============================================================================
+## Options: General Options
+=pod
+
+=head2 General Options
+
+=over 4
+
+=item -help
+
+Display a short help message and exit.
+
+=item -man
+
+Display a longer help message and exit.
+
+=item -version
+
+Display program and module version information and exit.
+
+=back
+
+=cut
+
+##==============================================================================
+## Options: Server Options
+=pod
+
+=head2 Server Options
+
+=over 4
+
+=item -bind HOST
+
+Set local hostname or IP address to listen on; default=C<127.0.0.1> just binds the
+loopback address.  If you're feeling adventurous, you can specify
+C<-bind=0.0.0.0> to bind all IP addresses assigned to the local machine.
+
+=item -port PORT
+
+Set local port to listen on; default=C<6066>.
+
+=back
+
+=cut
+
+
+##==============================================================================
+## Options: Logging Options
+=pod
+
+=head2 Logging Options
+
+The L<DTA::CAB|DTA::CAB> family of modules uses
+the Log::Log4perl logging mechanism.
+See L<Log::Log4perl(3pm)|Log::Log4perl> for details
+on the general logging mechanism.
+
+=over 4
+
+=item -log-level LEVEL
+
+Set minimum log level.  Has no effect if you also specify L</-log-config>.
+Known levels: (trace|debug|info|warn|error|fatal).
+
+=item -log-option OPT=VALUE
+
+Set any L<DiaColloDB::Logger|DiaColloDB::Logger> option, e.g. C<-log-option file=server.log>.
+
+=back
+
+=cut
+
+
+##======================================================================
+## Footer
+##======================================================================
+
+=pod
+
+=head1 ACKNOWLEDGEMENTS
+
+Perl by Larry Wall.
+
+=head1 AUTHOR
+
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2016 by Bryan Jurish
+
+This program is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.14.2 or,
+at your option, any later version of Perl 5 you may have available.
+
+=head1 SEE ALSO
+
+L<DiaColloDB::WWW::Server(3pm)|DiaColloDB::WWW::Server>,
+L<DiaColloDB::WWW::CGI(3pm)|DiaColloDB::WWW::CGI>,
+L<DiaColloDB(3pm)|DiaColloDB>,
+L<HTTP::Daemon(3pm)|HTTP::Daemon>,
+L<perl(1)|perl>,
+...
+
+=cut

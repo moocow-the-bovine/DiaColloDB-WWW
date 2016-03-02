@@ -46,7 +46,7 @@ our @ISA  = qw(DiaColloDB::Logger);
 sub new {
   my $that = shift;
   my $dbcgi = bless({
-		   ##-- basic stuff
+		     ##-- basic stuff
 		     prog => basename($0),
 		     ##
 		     ##-- underlying CGI module
@@ -130,13 +130,77 @@ sub _getenv {
   return $dbcgi;
 }
 
+## $dbcgi = $dbcgi->fromRequest($httpRequest,$csock)
+##  + sets up $dbcgi from an HTTP::Request object
+sub fromRequest {
+  my ($dbcgi,$hreq,$csock) = @_;
+
+  ##-- setup pseudo-environment
+  my $uri = $hreq->uri;
+  my @path = grep {$_ ne ''} $uri->path_segments;
+  $dbcgi->{prog}        = $path[$#path] || 'index';
+  $dbcgi->{remote_addr} = $ENV{REMOTE_ADDR} = $csock ? $csock->peerhost : '0.0.0.0';
+  $dbcgi->{remote_port} = $ENV{REMOTE_PORT} = $csock ? $csock->peerport : '0';
+  $dbcgi->{remote_user} = $ENV{REMOTE_USER} = '';
+  $dbcgi->{request_method} = $ENV{REQUEST_METHOD} = $hreq->method;
+  $dbcgi->{request_uri}   = $ENV{REQUEST_URI} = $uri->as_string;
+  $dbcgi->{request_query} = $ENV{REQUEST_QUERY} = $uri->query;
+  $dbcgi->{http_referer}  = $ENV{HTTP_REFERER} = $hreq->referer;
+  $dbcgi->{http_host}   = $ENV{HTTP_HOST} = $uri->host || $csock->sockhost;
+  $dbcgi->{server_addr} = $ENV{SERVER_ADDR} = $csock ? $csock->sockaddr : '0.0.0.0';
+  $dbcgi->{server_port} = $ENV{SERVER_PORT} = $csock ? $csock->sockport : '0';
+
+  ##-- setup variables
+  my %vars = $uri->query_form;
+  my $addVars = sub {
+    my $add = shift;
+    foreach (grep {defined $add->{$_}} keys %$add) {
+      if (!exists($vars{$_})) {
+	$vars{$_} = $add->{$_};
+      } else {
+	$vars{$_} = [ $vars{$_} ] if (!ref($vars{$_}));
+	push(@{$vars{$_}}, ref($add->{$_}) ? @{$add->{$_}} : $add->{$_});
+      }
+    }
+  };
+  if ($hreq->method eq 'POST') {
+    if ($hreq->content_type eq 'application/x-www-form-urlencoded') {
+      ##-- POST: x-www-form-urlencoded
+      $addVars->( {URI->new('?'.$hreq->content)->query_form} );
+    }
+    elsif ($hreq->content_type eq 'multipart/form-data') {
+      ##-- POST: multipart/form-data: parse by hand
+      foreach my $part ($hreq->parts) {
+	my $pdis = $part->header('Content-Disposition');
+	if ($pdis =~ /^form-data\b/) {
+	  ##-- POST: multipart/form-data: part: form-data; name="PARAMNAME"
+	  if ($pdis =~ /\bname=[\"\']?([\w\-\.\,\+]*)[\'\"]?/) {
+	    $addVars->({ $1 => $part->content });
+	    next;
+	  }
+	}
+	##-- POST: multipart/form-data: part: anything other than 'form-data; name="PARAMNAME"'
+	$addVars->({ POSTDATA => $part->content });
+      }
+    }
+    elsif ($hreq->content_length > 0) {
+      ##-- POST: anything else: use POSTDATA
+      $addVars->({ POSTDATA => $hreq->content });
+    }
+  }
+  $dbcgi->vars(\%vars);
+
+  return $dbcgi;
+}
+
 
 ## \%vars = $dbcgi->vars()
-##   + gets CGI variables, instantiating $dbcgi->{defaults} if present
+## \%vars = $dbcgi->vars(\%vars)
+##   + get/set CGI variables, instantiating $dbcgi->{defaults} if present
 sub vars {
-  my $dbcgi = shift;
-  return $dbcgi->{vars} if (defined($dbcgi->{vars}));
-  my $vars = $dbcgi->cgi('param') ? { %{$dbcgi->cgi('Vars')} } : {};
+  my ($dbcgi,$vars) = @_;
+  return $dbcgi->{vars} if (defined($dbcgi->{vars}) && !defined($vars));
+  $vars ||= $dbcgi->cgi('param') ? { %{$dbcgi->cgi('Vars')} } : {};
 
   if (($dbcgi->{cgipkg}//'CGI') ne 'CGI' || defined($vars->{POSTDATA})) {
     ##-- parse params from query string; required e.g. for CGI::Fast or non-form POST requests (which set POSTDATA)
@@ -239,19 +303,21 @@ sub ttk_template {
   return $t;
 }
 
-## $data = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs)
+## $data  = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs)
+## $dbcgi = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs, $outfh)
+## $dbcgi = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs, \$outbuf)
 ##  + process a template $srcFile, returns generated $data
 sub ttk_process {
-  my ($dbcgi,$src,$tvars,$targs) = @_;
-  my $out = '';
+  my ($dbcgi,$src,$tvars,$targs,$output) = @_;
+  my $outbuf = '';
   my $t = $dbcgi->ttk_template($targs);
   $t->process($src,
 	      {package=>$dbcgi->{ttk_package}, version=>$VERSION, ENV=>{%ENV}, %{$dbcgi->{ttk_vars}||{}}, cdb=>$dbcgi, %{$tvars||{}}},
-	      \$out,
-	      ($dbcgi->{ttk_process}||{}),
+	      (defined($output) ? $output : \$outbuf),
+	      %{$dbcgi->{ttk_process}||{}},
 	     )
     or $dbcgi->logconfess("ttk_process(): template error: ".$t->error);
-  return $out;
+  return defined($output) ? $dbcgi : $outbuf;
 }
 
 ##======================================================================

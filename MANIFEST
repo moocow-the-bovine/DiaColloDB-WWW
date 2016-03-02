@@ -6,6 +6,10 @@ Changes
 
 lib/DiaColloDB/WWW.pm
 lib/DiaColloDB/WWW/CGI.pm
+lib/DiaColloDB/WWW/Server.pm
+lib/DiaColloDB/WWW/Handler.pm
+lib/DiaColloDB/WWW/Handler/raw.pm
+lib/DiaColloDB/WWW/Handler/cgi.pm
 
 share/htdocs/dcdb-www-cgi.perl
 share/htdocs/dcdb-www-fcgi.perl
