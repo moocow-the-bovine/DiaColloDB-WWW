@@ -75,7 +75,10 @@ sub new {
 		     ttk_config  => {ENCODING=>'utf8'},	##-- options for Template->new()
 		     ttk_process => {binmode=>':utf8'},	##-- options for Template->process()
 		     ttk_dir     => abs_path(dirname($0)),
-		     ttk_key     => undef,		##-- template basename
+		     ttk_key     => undef,		##-- current template basename
+		     ttk_rawkeys => {			##-- pseudo-set of raw keys
+				     profile=>1,
+				    },
 		     ##
 		     ##-- File::ShareDir stuff (fallbacks for ttk_dir)
 		     ttk_sharedir => File::ShareDir::dist_dir("DiaColloDB-WWW")."/htdocs",
@@ -276,9 +279,10 @@ sub ttk_include {
 ##  + searches in $dbcgi->{ttk_dir} or $dbcgi->{ttk_sharedir}
 sub ttk_file {
   my ($dbcgi,$key) = @_;
-  (my $dir = $dbcgi->{ttk_dir} || '.') =~ s/\/+\z//;
-  my $file = $dbcgi->ttk_key($key).".ttk";
-  my @dirs = $dbcgi->ttk_include();
+  (my $dir  = $dbcgi->{ttk_dir} || '.') =~ s/\/+\z//;
+  $key      = $dbcgi->ttk_key($key);
+  my $file  = "$key.ttk";
+  my @dirs  = $dbcgi->ttk_include();
   foreach (@dirs) {
     return "$_/$file" if (-f "$_/$file");
   }
@@ -303,18 +307,19 @@ sub ttk_template {
   return $t;
 }
 
-## $data  = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs)
-## $dbcgi = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs, $outfh)
-## $dbcgi = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs, \$outbuf)
+## $data  = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs, \%templateProcessArgs)
+## $dbcgi = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs, \%templateProcessArgs, $outfh)
+## $dbcgi = $dbcgi->ttk_process($srcFile, \%templateVars, \%templateConfigArgs, \%templateProcessArgs, \$outbuf)
 ##  + process a template $srcFile, returns generated $data
 sub ttk_process {
-  my ($dbcgi,$src,$tvars,$targs,$output) = @_;
+  my ($dbcgi,$src,$tvars,$targs,$pargs,$output) = @_;
   my $outbuf = '';
   my $t = $dbcgi->ttk_template($targs);
   $t->process($src,
 	      {package=>$dbcgi->{ttk_package}, version=>$VERSION, ENV=>{%ENV}, %{$dbcgi->{ttk_vars}||{}}, cdb=>$dbcgi, %{$tvars||{}}},
 	      (defined($output) ? $output : \$outbuf),
 	      %{$dbcgi->{ttk_process}||{}},
+	      %{$pargs||{}},
 	     )
     or $dbcgi->logconfess("ttk_process(): template error: ".$t->error);
   return defined($output) ? $dbcgi : $outbuf;
@@ -364,15 +369,23 @@ sub cgi {
 ##  + wraps a template-instantiation for $ttk_key, by default basename($0)
 sub cgi_main {
   my ($dbcgi,$key) = @_;
-  my (@content);
+  my @content;
+  my $israw = $dbcgi->{ttk_rawkeys}{$dbcgi->ttk_key($key)};
   eval {
-    @content = $dbcgi->ttk_process($dbcgi->ttk_file($key), $dbcgi->vars);
+    @content = $dbcgi->ttk_process($dbcgi->ttk_file($key), $dbcgi->vars, ($israw ? {ENCODING=>undef} : undef), ($israw ? {binmode=>':raw'} : undef));
   };
-  @content = $dbcgi->htmlerror(undef, $@) if ($@);
-  @content = $dbcgi->htmlerror(undef, "template '$key' returned no content") if (!@content || !defined($content[0]));
+  if ($@) {
+    $israw   = 0;
+    @content = $dbcgi->htmlerror(undef, $@);
+  }
+  elsif (!@content || !defined($content[0])) {
+    $israw   = 0;
+    @content = $dbcgi->htmlerror(undef, "template '$key' returned no content");
+  }
+
   if ($dbcgi->{charset}) {
     charset($dbcgi->{charset});
-    binmode(\*STDOUT, ":encoding($dbcgi->{charset})");
+    binmode(\*STDOUT, ($israw ? ":raw" : ":encoding($dbcgi->{charset})"));
   }
   print @content;
 }

@@ -10,6 +10,7 @@
 package DiaColloDB::WWW::Handler::cgi;
 use DiaColloDB::WWW::Handler;
 use HTTP::Status;
+use File::Basename qw(basename);
 use URI::Escape qw(uri_escape uri_escape_utf8);
 use Carp;
 use strict;
@@ -48,9 +49,13 @@ sub run {
     or $h->logconfess("run(): failed to setup {dbcgi} object from HTTP::Request");
 
   ##-- run dbcgi template
+  my $ttkey = $dbcgi->ttk_key(basename($h->{template}, '.ttk'));
+  my $israw = $dbcgi->{ttk_rawkeys}{$ttkey};
   my ($content,$status);
   eval {
-    $dbcgi->ttk_process($h->{template}, $dbcgi->vars, undef, \$content);
+    $dbcgi->ttk_process($h->{template}, $dbcgi->vars,
+			($israw ? ({ENCODING=>undef},{binmode=>':raw'}) : (undef,undef)),
+			\$content);
     $status = RC_OK;
   };
   if ($@) {
@@ -60,6 +65,7 @@ sub run {
   }
 
   ##-- construct HTTP::Response
+  utf8::encode($content) if (utf8::is_utf8($content));
   my ($headers);
   if ($content =~ s/^(.*?)(?:\x{0d}\x{0a}){2}//s) {
     my $headstr = $1;
