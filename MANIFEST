@@ -4,6 +4,9 @@ README.txt
 README.rpod
 Changes
 
+dcdb-www-create.perl
+dcdb-www-server.perl
+
 lib/DiaColloDB/WWW.pm
 lib/DiaColloDB/WWW/CGI.pm
 lib/DiaColloDB/WWW/Server.pm
@@ -71,3 +74,9 @@ share/htdocs/dstar/images/diacollo-plots/score-lfm.png
 share/htdocs/dstar/images/diacollo-plots/score-ll.png
 share/htdocs/dstar/images/diacollo-plots/score-mi.png
 share/htdocs/dstar/images/diacollo-plots/score-mi3.png
+
+share/rc/corpus.ttk
+share/rc/custom.ttk
+share/rc/dstar.rc
+share/rc/local.rc
+share/rc/siterc.ttk
