@@ -11,10 +11,78 @@ DiaColloDB::WWW - www wrapper scripts and utitilties for DiaColloDB diachronic c
 
 =over 4
 
+=item CGI
+
+Available from CPAN.
+
+=item Cwd
+
+Available from CPAN.
+
 =item DiaColloDB
 
 For low-level index access,
 available from CPAN.
+
+=item Encode
+
+Available from CPAN.
+
+=item ExtUtils::MakeMaker
+
+Available from CPAN.
+
+=item File::Copy::Recursive
+
+Available from CPAN.
+
+=item File::MimeInfo
+
+Available from CPAN.
+
+=item File::ShareDir
+
+Available from CPAN.
+
+=item File::ShareDir::Install
+
+Available from CPAN.
+
+=item File::chmod::Recursive
+
+Available from CPAN.
+
+=item HTTP::Daemon
+
+Available from CPAN.
+
+=item HTTP::Message
+
+Available from CPAN.
+
+=item POSIX
+
+Available from CPAN.
+
+=item Socket
+
+Available from CPAN.
+
+=item Template
+
+Available from CPAN.
+
+=item Time::HiRes
+
+Available from CPAN.
+
+=item URI
+
+Available from CPAN.
+
+=item URI::Escape
+
+Available from CPAN.
 
 =item (an existing DiaColloDB index to query)
 
@@ -41,6 +109,73 @@ Issue the following commands to the shell:
  bash$ make                   # build the module
  bash$ make test              # (optional): test module before installing
  bash$ make install           # install the module on your system
+
+=head1 USAGE
+
+Assuming you have a raw text corpus you'd like to access via this module,
+the following steps will be required:
+
+=head2 Corpus Annotation and Conversion
+
+Your corpus must be tokenized and annotated with whatever word-level attributes and/or
+document-level metadata you wish to be able to query; in particular document date is
+required. See L<DiaColloDB::Document/SUBCLASSES> for a list of currently supported
+corpus formats.
+
+=head2 DiaCollo Index Creation
+
+You will need to compile a L<DiaColloDB|DiaColloDB> index for your corpus.
+This can be accomplished using the L<dcdb-create.perl(1)|dcdb-create.perl>
+script from the L<DiaColloDB|DiaColloDB> distribution.
+
+=head2 WWW Wrappers
+
+The proper domain of this distribution is to mediate between
+a high-level user interface running in a web browser and
+the L<DiaColloDB|DiaColloDB> index API itself.
+Utilities are provided for accomplishing this task in the following
+two ways:
+
+=head3 ... as a Standalone Server
+
+Once you have a DiaCollo index, you can access it by running the standalone
+server script L<dcdb-www-server.perl(1)|dcdb-www-server.perl>
+included in this distribution.
+
+=head3 ... or via an External HTTP Server
+
+Alternately, you can use the L<dcdb-www-create.perl(1)|dcdb-www-create.perl>
+script from this distribution to bootstrap a wrapper directory for
+use with an external webserver such as L<apache|http://httpd.apache.org/>.
+You will need to manually configure your webserver for the directory thus created.
+
+In either case, additional configuration will be necessary if you wish to
+have access to the corpus KWIC-link function, which requires a running
+L<DDC Server|http://sourceforge.net/projects/ddc-concordance/> and corresponding
+web wrappers for corpus searching.
+
+=head1 SEE ALSO
+
+=over 4
+
+=item *
+
+The user help page for the L<DiaColloDB::WWW|DiaColloDB::WWW> wrappers
+at L<http://kaskade.dwds.de/diacollo/help.perl>.
+
+=item *
+
+The CLARIN-D DiaCollo Showcase
+at L<http://clarin-d.de/de/kollokationsanalyse-in-diachroner-perspektive>
+contains a brief example-driven tutorial on using the DiaColloDB::WWW wrappers
+(in German).
+
+=item *
+
+The L<DiaColloDB::WWW|DiaColloDB::WWW>
+and L<DiaColloDB|DiaColloDB> documentation.
+
+=back
 
 =head1 AUTHOR
 
