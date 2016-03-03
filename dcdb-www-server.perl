@@ -113,7 +113,6 @@ dcdb-www-server.perl - standalone HTTP server for DiaColloDB indices
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
-  -verbose LEVEL                  ##-- really just an alias for -log-level=LEVEL
 
  Server Configuration Options:
   -bind HOST                      ##-- override host to bind (default=127.0.0.1)
@@ -121,7 +120,7 @@ dcdb-www-server.perl - standalone HTTP server for DiaColloDB indices
   -wwwdir DIR                     ##-- override WWW wrapper directory (default=shared)
 
  Logging Options:                 ##-- see Log::Log4perl(3pm)
-  -log-level LEVEL                ##-- set minimum log level (internal config only)
+  -log-level LEVEL                ##-- set minimum log level (default=INFO)
   -log-option OPT=VALUE           ##-- set any logging option (e.g. -log-option file=server.log)
 
 =cut
@@ -148,6 +147,25 @@ After successful startup, point your browser at F<http://HOST:PORT>
 =pod
 
 =head1 OPTIONS AND ARGUMENTS
+
+=cut
+
+###############################################################
+# Arguments
+###############################################################
+=pod
+
+=head2 Arguments
+
+=over 4
+
+=item DBDIR
+
+Local directory containing a L<DiaColloDB::DiaColloDB> index
+to be wrapped, as created by
+L<dcdb-create.perl(1)|dcdb-create.perl>.
+
+=back
 
 =cut
 
@@ -197,7 +215,7 @@ Set local port to listen on; default=C<6066>.
 
 Override WWW wrapper directory.  If unspecified, the default templates
 installed with the L<DiaColloDB::WWW|DiaColloDB::WWW> distribution are used.
-You can create a basic wrapper directory with the
+You can create a copy of the default wrapper directory with the
 L<dcdb-www-create.perl(1)|dcdb-www-create.perl> script and
 edit the F<dstar.rc> and/or F<dstar/corpus.ttk> files to override
 the default variables (e.g. corpus label, ddc server, KWIC query root, etc.).

@@ -192,13 +192,58 @@ dcdb-www-create.perl - instantiate apache www wrappers for a DiaColloDB index
 =cut
 
 ###############################################################
-## OPTIONS
+## DESCRIPTION
 ###############################################################
 =pod
 
-=head1 OPTIONS
+=head1 DESCRIPTION
+
+dcdb-www-create.perl
+instantiates a CGI wrapper directory for the
+L<DiaColloDB|DiaColloDB> index specified by the
+L<DBDIR|/DBDIR> argument in the output directory
+F<WWWDIR> specified by the L<-output|/-output WWWDIR>
+option.  The directory created can be customized
+by editing the configuration files and then served
+by the http daemon of your choice (e.g. apache),
+or used as a template for the standalone server
+L<dcdb-www-server.perl(1)|dcdb-www-server.perl>.
+In the latter case, note that you don't I<need> to
+create a wrapper directory to use the standalone server
+unless you want to override the default templates
+included in the L<DiaColloDB::WWW|DiaColloDB::WWW> distribution.
 
 =cut
+
+
+###############################################################
+## OPTIONS AND ARGUMENTS
+###############################################################
+=pod
+
+=head1 OPTIONS AND ARGUMENTS
+
+=cut
+
+###############################################################
+# Arguments
+###############################################################
+=pod
+
+=head2 Arguments
+
+=over 4
+
+=item DBDIR
+
+Local directory containing a L<DiaColloDB::DiaColloDB> index
+to be wrapped, as created by
+L<dcdb-create.perl(1)|dcdb-create.perl>.
+
+=back
+
+=cut
+
 
 ###############################################################
 # General Options
@@ -216,10 +261,6 @@ Display a brief help message and exit.
 =item -version
 
 Display version information and exit.
-
-=item -verbose LEVEL
-
-Set verbosity level to LEVEL.  Default=1.
 
 =back
 
@@ -248,12 +289,12 @@ Install a user-specified C<RCFILE> as F<WWWDIR/local.rc>
 =item -corpus-ttk TTKFILE
 
 Install a user-specified C<TTKFILE> as F<WWWDIR/dstar/corpus.ttk>
-(Template Toolkit format, base configuration).
+(L<Template Toolkit|Template> format, base configuration).
 
 =item -custom-ttk TTKFILE
 
 Install a user-specified C<TTKFILE> as F<WWWDIR/dstar/custom.ttk>
-(Template Toolkit format, overrides).
+(L<Template Toolkit|Template> format, overrides).
 
 =item -site-rc , -nosite-rc
 
