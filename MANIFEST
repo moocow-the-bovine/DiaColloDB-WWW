@@ -14,6 +14,8 @@ lib/DiaColloDB/WWW/Handler.pm
 lib/DiaColloDB/WWW/Handler/raw.pm
 lib/DiaColloDB/WWW/Handler/cgi.pm
 
+t/00_basic.t
+
 share/htdocs/dcdb-www-cgi.perl
 share/htdocs/dcdb-www-fcgi.perl
 share/htdocs/help.perl

@@ -8,6 +8,7 @@ require 5.10.0; ##-- for // operator
 
 use DiaColloDB;
 use DiaColloDB::WWW::CGI;
+use DiaColloDB::WWW::Server;
 use strict;
 
 ##==============================================================================

@@ -26,9 +26,6 @@ sub new {
   return bless { file=>'', contentType=>undef, charset=>'utf8', @_ }, ref($that)||$that;
 }
 
-## $bool = $obj->prepare($srv)
-sub prepare { return (-r $_[0]{file}); }
-
 ## $rsp = $h->run($server, $clientConn, $httpRequest)
 sub run {
   my ($h,$srv,$csock,$hreq) = @_;

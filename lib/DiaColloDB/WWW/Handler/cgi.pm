@@ -34,9 +34,6 @@ sub new {
   return $h;
 }
 
-## $bool = $h->prepare($server)
-##  + inherited (dummy)
-
 ## $rsp = $h->run($server, $clientConn, $httpRequest)
 sub run {
   my ($h,$srv,$csock,$hreq) = @_;

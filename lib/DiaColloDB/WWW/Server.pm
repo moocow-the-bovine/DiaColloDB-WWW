@@ -11,7 +11,7 @@ use DiaColloDB::Logger;
 use DiaColloDB::WWW::CGI;
 use DiaColloDB::WWW::Handler;
 use DiaColloDB::WWW::Handler::cgi;
-use DiaColloDB::WWW::Handler::raw;
+use DiaColloDB::WWW::Handler::static;
 use File::ShareDir qw(dist_dir);
 use HTTP::Daemon;
 use HTTP::Status;
@@ -337,8 +337,8 @@ sub getPathHandler {
     return DiaColloDB::WWW::Handler::cgi->new(template=>"$wwwdir/$path.ttk");
   }
   elsif (-r "$wwwdir/$path") {
-    ##-- handle raw files
-    return DiaColloDB::WWW::Handler::raw->new(file=>"$wwwdir/$path");
+    ##-- handle static files
+    return DiaColloDB::WWW::Handler::static->new(file=>"$wwwdir/$path");
   }
 
   return undef;
@@ -351,34 +351,6 @@ sub mimetype {
   $srv->logconfess("mimetype() called but no {mimetypes} key defined!") if (!defined($srv->{mimetypes}));
   my $type = $srv->{mimetypes}->mimeTypeOf($file);
   return defined($type) ? $type->type : undef;
-}
-
-## $sub = $srv->handle_ttk($uri_path,$ttk_path)
-##  + OBSOLETE
-sub handle_ttk {
-  my ($srv,$path,$ttk) = @_;
-  return sub {
-    my ($csock,$hreq) = @_;
-    $srv->debug("TODO: handle $path as ttk $ttk via CGI");
-    $srv->clientError($csock,undef,"not yet implemented");
-  };
-}
-
-## $sub = $srv->handle_raw($file_path)
-##  + OBSOLETE
-sub handle_raw {
-  my ($srv,$path,$file) = @_;
-  return sub {
-    my ($csock,$hreq) = @_;
-    my $ctype = mimetype($file);
-    $ctype .= "; charset=utf-8" if ($ctype =~ /^text/ && $ctype !~ /\bcharset\b/);
-    binmode($csock,':raw');
-    $csock->print(CGI->header($ctype))
-      or $srv->logconfess("handle_raw() failed to write header for file $file: $!");
-    return 1 if ($hreq->method eq 'HEAD');
-    File::Copy::copy($file,$csock)
-      or $srv->logconfess("handle_raw() failed to write data for file $file: $!");
-  };
 }
 
 ##======================================================================

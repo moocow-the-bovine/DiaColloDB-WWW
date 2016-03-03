@@ -43,6 +43,45 @@ our @ISA  = qw(DiaColloDB::Logger);
 ## constructors etc.
 
 ## $dbcgi = $that->new(%args)
+##  + %args, object structure:
+##    (
+##     ##-- basic stuff
+##     prog => basename($0),
+##     ##
+##     ##-- underlying CGI module
+##     cgipkg => 'CGI',
+##     ##
+##     ##-- CGI params
+##     defaults => {},
+##     vars     => undef,
+##     charset  => 'utf-8',
+##     nodecode => {}, ##-- vars not to decode
+##     ##
+##     ##-- CGI environment stuff : see getenv() method
+##     remote_addr => undef,
+##     remote_user => undef,
+##     request_method => undef,
+##     request_uri => undef,
+##     request_query => undef,
+##     http_referer => undef,
+##     http_host    => undef,
+##     server_addr  => undef,
+##     server_port  => undef,
+##     ##
+##     ##-- template toolkit stuff
+##     ttk_package => (ref($that)||$that),
+##     ttk_vars    => {},			##-- template vars
+##     ttk_config  => {ENCODING=>'utf8'},	##-- options for Template->new()
+##     ttk_process => {binmode=>':utf8'},	##-- options for Template->process()
+##     ttk_dir     => abs_path(dirname($0)),
+##     ttk_key     => undef,		##-- current template basename
+##     ttk_rawkeys => {			##-- pseudo-set of raw keys
+##     profile=>1,
+##     },
+##     ##
+##     ##-- File::ShareDir stuff (fallbacks for ttk_dir)
+##     ttk_sharedir => File::ShareDir::dist_dir("DiaColloDB-WWW")."/htdocs",
+##    )
 sub new {
   my $that = shift;
   my $dbcgi = bless({
@@ -457,7 +496,7 @@ sub uriDir {
 ## $query  = $dbcgi->uriQuery($uri?)
 ## \%form  = $dbcgi->uriQueryForm($uri?)
 ## \@kws    = $dbcgi->uriQueryKeywords($uri?)
-sub uriAuthoriry { $_[0]->uri($_[1])->authority; }
+sub uriAuthority { $_[0]->uri($_[1])->authority; }
 sub uriPathQuery { $_[0]->uri($_[1])->path_query; }
 sub uriPathSegments { [$_[0]->uri($_[1])->path_segments]; }
 sub uriQuery { $_[0]->uri($_[1])->query; }
