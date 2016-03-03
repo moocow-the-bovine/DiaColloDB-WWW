@@ -1,13 +1,13 @@
 ##-*- Mode: CPerl -*-
 
-## File: DiaColloDB::WWW::Handler::raw.pm
+## File: DiaColloDB::WWW::Handler::static.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
 ## Description:
-##  + DiaColloDB::WWW::Server URI handler for raw files
+##  + DiaColloDB::WWW::Server URI handler for static files
 ##  + adapted from DTA::CAB::Server::HTTP::Handler::File ( svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk/CAB/Server/HTTP/Handler/File.pm )
 ##======================================================================
 
-package DiaColloDB::WWW::Handler::raw;
+package DiaColloDB::WWW::Handler::static;
 use DiaColloDB::WWW::Handler;
 use HTTP::Status;
 use Carp;

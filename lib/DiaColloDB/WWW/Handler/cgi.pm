@@ -38,10 +38,25 @@ sub new {
 sub run {
   my ($h,$srv,$csock,$hreq) = @_;
 
+  ##-- load config
+  local (%::dstar) = qw();
+  {
+    package main;
+    my ($rcfile);
+    if (-r ($rcfile="$srv->{wwwdir}/dstar.rc")) {
+      do "$rcfile" or $h->logconfess("run(): failed to load dstar config file '$rcfile': $@");
+    }
+    if (-r ($rcfile="$srv->{wwwdir}/local.rc")) {
+      do "$rcfile" or $h->logconfess("run(): failed to load local config file '$rcfile': $@");
+    }
+    $::dstar{corpus} ||= $srv->{dbdir};
+  }
+
   ##-- setup dbcgi object
-  my $dbcgi = $srv->{cgi};
+  my $dbcgi =  DiaColloDB::WWW::CGI->new(%{$srv->{cgiArgs}//{}})
+    or $h->logconfess("could not create DiaColloDB::WWW::CGI object: $!");
   $dbcgi->{ttk_vars}{DIACOLLO_DBDIR} = $srv->{dbdir};
-  $dbcgi->{ttk_vars}{dstar}{corpus}  = $srv->{dbdir};
+  $dbcgi->{ttk_vars}{dstar}{$_}      = $::dstar{$_} foreach (keys %::dstar);
   $dbcgi->fromRequest($hreq,$csock)
     or $h->logconfess("run(): failed to setup {dbcgi} object from HTTP::Request");
 

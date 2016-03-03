@@ -37,6 +37,7 @@ GetOptions(##-- General
 	   ##-- Server configuration
 	   'addr|a|bind|b|host=s'   => \$srv{daemonArgs}{LocalAddr},
 	   'port|p=i'   => \$srv{daemonArgs}{LocalPort},
+	   'wwwdir|www-dir|wd|w=s' => \$srv{wwwdir},
 
 	   ##-- logging stuff
 	   'log-level|level|ll=s' => sub { $log{level} = uc($_[1]); },
@@ -58,22 +59,32 @@ pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBDIR specified!"}) if (@ARGV < 1);
 DiaColloDB::Logger->ensureLog(%log);
 
 ##-- get dbdir
+my $cwd   = abs_path(".");
 my $dbdir = $srv{dbdir} = shift(@ARGV);
 die("$0: cannot access DBDIR $dbdir") if (!-d $dbdir);
 
 ##-- create / load server object
+if (defined($srv{wwwdir})) {
+  $srv{dbdir}  = abs_path($srv{dbdir});
+  $srv{wwwdir} = abs_path($srv{wwwdir});
+  chdir($srv{wwwdir});
+}
+END {
+  chdir($cwd);
+}
 my $srv = DiaColloDB::WWW::Server->new(%srv)
   or die("$0: failed to create DiaColloDB::WWW::Server object");
 
 ##-- serverMain(): main post-preparation code; run in subprocess if we're in daemon mode
 my $dargs = $srv->{daemonArgs} || {};
 sub serverMain {
-  ##-- prepare & run server
   $srv->info("serverMain(): initializing server $dargs->{LocalAddr}:$dargs->{LocalPort}");
   $srv->info("serverMain(): using DiaColloDB::WWW::Server version $DiaColloDB::WWW::Server::VERSION");
-  #$srv->info("serverMain(): CWD ", abs_path(getcwd));
   $srv->prepare()
     or $srv->logdie("prepare() failed!");
+  $srv->info("serverMain(): CWD    = ", abs_path(getcwd));
+  $srv->info("serverMain(): DBDIR  = ", abs_path($srv->{dbdir}));
+  $srv->info("serverMain(): WWWDIR = ", abs_path($srv->{wwwdir} // '(default)'));
   $srv->run();
   $srv->finish();
   $srv->info("exiting");
@@ -107,6 +118,7 @@ dcdb-www-server.perl - standalone HTTP server for DiaColloDB indices
  Server Configuration Options:
   -bind HOST                      ##-- override host to bind (default=127.0.0.1)
   -port PORT                      ##-- override port to bind (default=6066)
+  -wwwdir DIR                     ##-- override WWW wrapper directory (default=shared)
 
  Logging Options:                 ##-- see Log::Log4perl(3pm)
   -log-level LEVEL                ##-- set minimum log level (internal config only)
@@ -180,6 +192,15 @@ C<-bind=0.0.0.0> to bind all IP addresses assigned to the local machine.
 =item -port PORT
 
 Set local port to listen on; default=C<6066>.
+
+=item -wwwdir DIR
+
+Override WWW wrapper directory.  If unspecified, the default templates
+installed with the L<DiaColloDB::WWW|DiaColloDB::WWW> distribution are used.
+You can create a basic wrapper directory with the
+L<dcdb-www-create.perl(1)|dcdb-www-create.perl> script and
+edit the F<dstar.rc> and/or F<dstar/corpus.ttk> files to override
+the default variables (e.g. corpus label, ddc server, KWIC query root, etc.).
 
 =back
 

@@ -8,11 +8,17 @@ dcdb-www-create.perl
 dcdb-www-server.perl
 
 lib/DiaColloDB/WWW.pm
+lib/DiaColloDB/WWW.pod
 lib/DiaColloDB/WWW/CGI.pm
+lib/DiaColloDB/WWW/CGI.pod
 lib/DiaColloDB/WWW/Server.pm
+lib/DiaColloDB/WWW/Server.pod
 lib/DiaColloDB/WWW/Handler.pm
-lib/DiaColloDB/WWW/Handler/raw.pm
+lib/DiaColloDB/WWW/Handler.pod
 lib/DiaColloDB/WWW/Handler/cgi.pm
+lib/DiaColloDB/WWW/Handler/cgi.pod
+lib/DiaColloDB/WWW/Handler/static.pm
+lib/DiaColloDB/WWW/Handler/static.pod
 
 t/00_basic.t
 

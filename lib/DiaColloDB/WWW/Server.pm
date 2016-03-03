@@ -38,7 +38,6 @@ our @ISA  = qw(DiaColloDB::Logger);
 ##     daemonMode => $daemonMode,    ##-- one of 'serial' or 'fork' [default='serial']
 ##     daemonArgs => \%daemonArgs,   ##-- args to HTTP::Daemon->new(); default={LocalAddr=>'0.0.0.0',LocalPort=>6066}
 ##     daemon     => $daemon,        ##-- underlying HTTP::Daemon object
-##     cgi        => $dbcgi,         ##-- DiaColloDB::WWW::CGI object for handling CGI requests
 ##     cgiArgs    => \%cgiArgs,      ##-- args to DiaColloDB::WWW::CGI->new(); default=none
 ##     mimetypes  => $mt,            ##-- a MIME::Types object for guessing mime types
 ##     ##
@@ -65,7 +64,6 @@ sub new {
 				  ReuseAddr=>1,
 				  #ReusePort=>1, ##-- don't set this; it causes errors "Your vendor has not defined Socket macro SO_REUSEPORT"
 				 },
-		   cgi => undef,  ##-- see prepareLocal()
 		   cgiArgs => {},
 		   mimetypes => undef, ##-- see prepareLocal()
 
@@ -158,11 +156,6 @@ sub prepareLocal {
   ##-- setup wwwdir
   $srv->{wwwdir} //= dist_dir("DiaColloDB-WWW")."/htdocs";
 
-  ##-- setup DiaColloDB::WWW::CGI object
-  if (!($srv->{cgi} //= DiaColloDB::WWW::CGI->new(%{$srv->{cgiArgs}//{}}))) {
-    $srv->logconfess("could not create DiaColloDB::WWW::CGI object: $!");
-  }
-
   ##-- setup mimetypes object
   if (!($srv->{mimetypes} //= MIME::Types->new())) {
     $srv->logconfess("could not create MIME::Types object: $!");
@@ -192,7 +185,6 @@ sub run {
   my $srv = shift;
   $srv->prepare() if (!$srv->{daemon}); ##-- sanity check
   $srv->logconfess("run(): no underlying HTTP::Daemon object!") if (!$srv->{daemon});
-  $srv->logconfess("run(): no underlying DiaColloDB::WWW::CGI object!") if (!$srv->{cgi});
 
   my $daemon = $srv->{daemon};
   my $mode   = $srv->{daemonMode} || 'serial';
