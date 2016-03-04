@@ -28,7 +28,7 @@ WriteMakefile
 		    'File::Copy::Recursive' => 0, ##-- 0.38
 		    'File::chmod::Recursive' => 0, ##-- 1.0.3
 		    'File::ShareDir' => 0, ##-- 1.102
-		    'File::MimeInfo' => 0, ##-- 0.26
+		    'MIME::Types' => 0, ##-- 2.09
 		    'POSIX' => 0,
 		    'Socket' => 0,
 		    'Template' => 0,
