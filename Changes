@@ -2,5 +2,8 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
-v0.01.001 Thu, 03 Mar 2016 15:09:26 +0100
+v0.01.002 Fri, 04 Mar 2016 09:01:28 +0100 moocow
+	* added missing prereq DiaColloDB (oops)
+
+v0.01.001 Thu, 03 Mar 2016 15:09:26 +0100 moocow
 	* initial version

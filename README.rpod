@@ -167,7 +167,8 @@ at L<http://kaskade.dwds.de/diacollo/help.perl>.
 
 The CLARIN-D DiaCollo Showcase
 at L<http://clarin-d.de/de/kollokationsanalyse-in-diachroner-perspektive>
-contains a brief example-driven tutorial on using the DiaColloDB::WWW wrappers
+contains a brief example-driven tutorial on using the web-service
+implemented by the DiaColloDB::WWW wrappers
 (in German).
 
 =item *
