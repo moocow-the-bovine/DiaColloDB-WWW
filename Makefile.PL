@@ -19,8 +19,9 @@ WriteMakefile
 
    PREREQ_PM    => {
 		    'CGI' => 0,
-		    'Cwd' => 0,
 		    #'CGI::Fast' => 0,
+		    'Cwd' => 0,
+		    'DiaColloDB' => '0.08.003', ##-- 0.08.003
 		    'Encode' => 0,
 		    'HTTP::Message' => 0, ##-- 6.06
 		    'HTTP::Daemon'  => 0, ##-- 6.01
