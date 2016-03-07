@@ -5,60 +5,26 @@ ABSTRACT
     diachronic collocation database
 
 REQUIREMENTS
-    CGI Available from CPAN.
-
-    Cwd Available from CPAN.
+  Perl Modules
+    The following non-core perl modules are required, and should be
+    available from CPAN <http://www.cpan.org>.
 
     DiaColloDB
-        For low-level index access, available from CPAN.
-
-    Encode
-        Available from CPAN.
-
-    ExtUtils::MakeMaker
-        Available from CPAN.
-
     File::Copy::Recursive
-        Available from CPAN.
-
-    File::MimeInfo
-        Available from CPAN.
-
     File::ShareDir
-        Available from CPAN.
-
     File::ShareDir::Install
-        Available from CPAN.
-
     File::chmod::Recursive
-        Available from CPAN.
-
     HTTP::Daemon
-        Available from CPAN.
-
     HTTP::Message
-        Available from CPAN.
-
-    POSIX
-        Available from CPAN.
-
-    Socket
-        Available from CPAN.
-
+    MIME::Types
     Template
-        Available from CPAN.
-
-    Time::HiRes
-        Available from CPAN.
-
-    URI Available from CPAN.
-
+    URI
     URI::Escape
-        Available from CPAN.
 
-    (an existing DiaColloDB index to query)
-        See dcdb-create.perl(1) from the DiaColloDB distribution for
-        details.
+  Additional Requirements
+    In order to make use of this module, you will also need an existing
+    DiaCollo index to query. See dcdb-create.perl(1) from the DiaColloDB
+    distribution for details.
 
 DESCRIPTION
     The DiaColloDB::WWW package provides a set of Perl modules and wrapper
@@ -74,8 +40,10 @@ INSTALLATION
      bash$ make test              # (optional): test module before installing
      bash$ make install           # install the module on your system
 
+    See perlmodinstall for details.
+
 USAGE
-    Assuming you have a raw text corpus you'd like to access via this
+    Assuming you have a raw text corpus you would like to access via this
     module, the following steps will be required:
 
   Corpus Annotation and Conversion
@@ -122,13 +90,21 @@ SEE ALSO
 
     *   The DiaColloDB::WWW and DiaColloDB documentation.
 
-AUTHORS
-    Bryan Jurish <moocow@cpan.org> wrote and maintains the DiaColloDB::WWW
-    distribution.
-
+THIRD PARTY LIBRARIES
     Includes d3.layout.cloud.js by Jason Davies, see
-    <https://github.com/jasondavies/d3-cloud>.
+    <https://github.com/jasondavies/d3-cloud> for details.
 
     Includes purl.js by Mark Perkins, see
-    <https://github.com/allmarkedup/purl>.
+    <https://github.com/allmarkedup/purl> for details.
+
+    Online time-series visualization via the "highcharts" format dynamically
+    loads client-side JavaScript libraries not included in this distribution
+    from <http://www.highcharts.com/>. The Highcharts JavaScript libraries
+    are available free of cost for non-commercial use; see
+    <http://www.highcharts.com/products/highcharts/#non-commercial> for
+    details.
+
+AUTHOR
+    Bryan Jurish <moocow@cpan.org> wrote and maintains the DiaColloDB::WWW
+    distribution.
 

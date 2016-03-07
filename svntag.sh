@@ -3,7 +3,7 @@
 svnroot=`svnroot.sh .`
 svntags="${svnroot%/trunk}/tags";
 tagprefix=$(basename $(readlink -f $(dirname "$0")))
-tagversion=$(perl-reversion -dryrun *.pm | tail -n1 | awk '{print $5}')
+tagversion=$(perl-reversion -dryrun $(find lib -name '*.pm') | tail -n1 | awk '{print $5}')
 dummy=""
 
 show_help() {
