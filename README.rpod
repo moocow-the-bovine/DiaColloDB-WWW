@@ -9,88 +9,47 @@ DiaColloDB::WWW - www wrapper scripts and utitilties for DiaColloDB diachronic c
 
 =head1 REQUIREMENTS
 
+
+=head2 Perl Modules
+
+The following non-core perl modules are required,
+and should be available from L<CPAN|http://www.cpan.org>.
+
 =over 4
-
-=item CGI
-
-Available from CPAN.
-
-=item Cwd
-
-Available from CPAN.
 
 =item DiaColloDB
 
-For low-level index access,
-available from CPAN.
-
-=item Encode
-
-Available from CPAN.
-
-=item ExtUtils::MakeMaker
-
-Available from CPAN.
-
 =item File::Copy::Recursive
-
-Available from CPAN.
-
-=item File::MimeInfo
-
-Available from CPAN.
 
 =item File::ShareDir
 
-Available from CPAN.
-
 =item File::ShareDir::Install
-
-Available from CPAN.
 
 =item File::chmod::Recursive
 
-Available from CPAN.
-
 =item HTTP::Daemon
-
-Available from CPAN.
 
 =item HTTP::Message
 
-Available from CPAN.
-
-=item POSIX
-
-Available from CPAN.
-
-=item Socket
-
-Available from CPAN.
+=item MIME::Types
 
 =item Template
 
-Available from CPAN.
-
-=item Time::HiRes
-
-Available from CPAN.
-
 =item URI
-
-Available from CPAN.
 
 =item URI::Escape
 
-Available from CPAN.
+=back
 
-=item (an existing DiaColloDB index to query)
+=head2 Additional Requirements
 
+In order to make use of this module,
+you will also need
+an existing DiaCollo index to query.
 See L<dcdb-create.perl(1)|dcdb-create.perl>
 from the L<DiaColloDB|DiaColloDB> distribution
 for details.
 
-=back
 
 
 =head1 DESCRIPTION
@@ -110,9 +69,11 @@ Issue the following commands to the shell:
  bash$ make test              # (optional): test module before installing
  bash$ make install           # install the module on your system
 
+See L<perlmodinstall> for details.
+
 =head1 USAGE
 
-Assuming you have a raw text corpus you'd like to access via this module,
+Assuming you have a raw text corpus you would like to access via this module,
 the following steps will be required:
 
 =head2 Corpus Annotation and Conversion
@@ -178,8 +139,24 @@ and L<DiaColloDB|DiaColloDB> documentation.
 
 =back
 
+=head1 THIRD PARTY LIBRARIES
+
+Includes F<d3.layout.cloud.js> by Jason Davies,
+see L<https://github.com/jasondavies/d3-cloud> for details.
+
+Includes F<purl.js> by Mark Perkins,
+see L<https://github.com/allmarkedup/purl> for details.
+
+Online time-series visualization via the "highcharts" format
+dynamically loads client-side JavaScript libraries not included in this distribution from
+L<http://www.highcharts.com/>.
+The Highcharts JavaScript libraries are available free of cost for non-commercial use;
+see L<http://www.highcharts.com/products/highcharts/#non-commercial>
+for details.
+
 =head1 AUTHOR
 
 Bryan Jurish E<lt>moocow@cpan.orgE<gt>
+wrote and maintains the DiaColloDB::WWW distribution.
 
 =cut

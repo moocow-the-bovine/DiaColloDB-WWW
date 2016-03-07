@@ -37,6 +37,7 @@ share/htdocs/dc-html-head.ttk
 share/htdocs/dc-links.ttk
 share/htdocs/diacollo.css
 share/htdocs/d3.layout.cloud.js
+share/htdocs/d3.layout.cloud.LICENSE.txt
 share/htdocs/diacollo.js
 
 share/htdocs/dstar/common.ttk
@@ -44,6 +45,7 @@ share/htdocs/dstar/dbcgi.css
 share/htdocs/dstar/dstar.css
 share/htdocs/dstar/dstar.js
 share/htdocs/dstar/purl.js
+share/htdocs/dstar/purl.LICENSE.txt
 share/htdocs/dstar/html-foot.ttk
 share/htdocs/dstar/html-head.ttk
 share/htdocs/profile.ttk

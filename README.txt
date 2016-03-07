@@ -122,6 +122,13 @@ SEE ALSO
 
     *   The DiaColloDB::WWW and DiaColloDB documentation.
 
-AUTHOR
-    Bryan Jurish <moocow@cpan.org>
+AUTHORS
+    Bryan Jurish <moocow@cpan.org> wrote and maintains the DiaColloDB::WWW
+    distribution.
+
+    Includes d3.layout.cloud.js by Jason Davies, see
+    <https://github.com/jasondavies/d3-cloud>.
+
+    Includes purl.js by Mark Perkins, see
+    <https://github.com/allmarkedup/purl>.
 

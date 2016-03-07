@@ -2,6 +2,13 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
+v0.01.004 Mon, 07 Mar 2016 09:04:48 +0100 moocow
+	* diacollo.js: use jquery-ui for hicharts 'details' popup
+	  - eliminates need for highslide.js dependency (overly restrictive license)
+	  - enables info popups in standalone mode
+	* added license files for included third-party libraries (d3.layout.cloud.js, purl.js)
+	* added attribution for third-party code to README
+
 v0.01.003 Fri, 04 Mar 2016 14:14:44 +0100 moocow
 	* fixed File::MimeInfo -> MIME::Types dependency
 

@@ -1,6 +1,7 @@
 ~$
 ^MANIFEST\.SKIP$
 ^reversion\.sh$
+^svntag\.sh$
 ^dstar-
 ^kant\b
 ^kern\b
