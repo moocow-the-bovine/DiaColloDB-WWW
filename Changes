@@ -2,6 +2,9 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
+v0.01.005 Wed, 13 Apr 2016 13:46:21 +0200 moocow
+	* diacollo.js fixes for internet exploder / win7
+
 v0.01.004 Mon, 07 Mar 2016 09:04:48 +0100 moocow
 	* diacollo.js: use jquery-ui for hicharts 'details' popup
 	  - eliminates need for highslide.js dependency (overly restrictive license)
