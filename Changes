@@ -2,6 +2,9 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
+v0.01.006 Wed, 13 Apr 2016 13:46:21 +0200 moocow
+	* diacollo.js submit-on-enter for ie 11
+
 v0.01.005 Wed, 13 Apr 2016 13:46:21 +0200 moocow
 	* diacollo.js fixes for internet exploder / win7
 

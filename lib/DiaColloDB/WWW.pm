@@ -13,7 +13,7 @@ use strict;
 
 ##==============================================================================
 ## Globals & Constants
-our $VERSION = "0.01.005";
+our $VERSION = "0.01.006";
 our @ISA = qw(DiaColloDB::Logger);
 
 
