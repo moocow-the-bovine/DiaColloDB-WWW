@@ -59,7 +59,7 @@ pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBDIR specified!"}) if (@ARGV < 1);
 DiaColloDB::Logger->ensureLog(%log);
 
 ##-- get dbdir
-my $cwd   = abs_path(".");
+our $cwd   = abs_path(".");
 my $dbdir = $srv{dbdir} = shift(@ARGV);
 die("$0: cannot access DBDIR $dbdir") if (!-d $dbdir);
 
