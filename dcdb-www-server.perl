@@ -27,6 +27,9 @@ our %srv = (wwwdir=>undef,
 	    daemonArgs=>{LocalAddr=>'127.0.0.1', LocalPort=>6066,ReuseAddr=>1},
 	   );
 
+##-- caller state
+our $cwd = abs_path(".");
+
 ##==============================================================================
 ## Command-line
 GetOptions(##-- General
@@ -59,7 +62,6 @@ pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBDIR specified!"}) if (@ARGV < 1);
 DiaColloDB::Logger->ensureLog(%log);
 
 ##-- get dbdir
-our $cwd   = abs_path(".");
 my $dbdir = $srv{dbdir} = shift(@ARGV);
 die("$0: cannot access DBDIR $dbdir") if (!-d $dbdir);
 
@@ -70,7 +72,7 @@ if (defined($srv{wwwdir})) {
   chdir($srv{wwwdir});
 }
 END {
-  chdir($cwd);
+  chdir($cwd) if (defined($cwd));
 }
 my $srv = DiaColloDB::WWW::Server->new(%srv)
   or die("$0: failed to create DiaColloDB::WWW::Server object");
