@@ -1,4 +1,5 @@
 ~$
+^DiaColloDB-WWW-
 ^MANIFEST\.SKIP$
 ^reversion\.sh$
 ^svntag\.sh$

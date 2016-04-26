@@ -2,8 +2,9 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
-pending Tue, 26 Apr 2016 10:08:40 +0200 moocow
+v0.01.007 Tue, 26 Apr 2016 15:05:28 +0200 moocow
 	* fixed "Use of uninitialized value $cwd in chdir" bug in dcdb-www-server.perl
+	* added pass-through for 'onepass' option in share/htdocs/dc-common.ttk , diacollo.js
 
 v0.01.006 Wed, 13 Apr 2016 13:46:21 +0200 moocow
 	* diacollo.js submit-on-enter for ie 11
