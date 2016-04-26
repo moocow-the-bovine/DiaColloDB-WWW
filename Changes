@@ -3,7 +3,7 @@
 ## Change log for perl distribution DiaColloDB::WWW
 
 pending Tue, 26 Apr 2016 10:08:40 +0200 moocow
-	* fixed 'Use of uninitialized value $cwd in chdir' bug in dcdb-www-server.perl
+	* fixed "Use of uninitialized value $cwd in chdir" bug in dcdb-www-server.perl
 
 v0.01.006 Wed, 13 Apr 2016 13:46:21 +0200 moocow
 	* diacollo.js submit-on-enter for ie 11
