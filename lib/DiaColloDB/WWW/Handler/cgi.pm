@@ -55,6 +55,7 @@ sub run {
   ##-- setup dbcgi object
   my $dbcgi =  DiaColloDB::WWW::CGI->new(%{$srv->{cgiArgs}//{}})
     or $h->logconfess("could not create DiaColloDB::WWW::CGI object: $!");
+  $dbcgi->t_start(); ##-- re-start package-global timer (hack; this should really be object-local)
   $dbcgi->{ttk_vars}{DIACOLLO_DBDIR} = $srv->{dbdir};
   $dbcgi->{ttk_vars}{dstar}{$_}      = $::dstar{$_} foreach (keys %::dstar);
   $dbcgi->fromRequest($hreq,$csock)

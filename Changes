@@ -2,6 +2,11 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
+v0.01.008 Wed, 27 Apr 2016 09:14:06 +0200 moocow
+	* raised "onepass" option to user-level
+	* band-aided DiaColloDB::WWW::CGI package-global timer reset for standalone server in DiaColloDB::WWW::Handler::cgi
+	  - should really (optionally) use object-local {t_started} in DiaColloDB::WWW::CGI
+
 v0.01.007 Tue, 26 Apr 2016 15:05:28 +0200 moocow
 	* fixed "Use of uninitialized value $cwd in chdir" bug in dcdb-www-server.perl
 	* added pass-through for 'onepass' option in share/htdocs/dc-common.ttk , diacollo.js
