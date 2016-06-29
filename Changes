@@ -2,6 +2,9 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
+v0.01.009 Wed, 29 Jun 2016 08:10:09 +0100 moocow
+	* added missing Template::Plugin:JSON::Escape dependency, for cpan install
+
 v0.01.008 Wed, 27 Apr 2016 09:14:06 +0200 moocow
 	* raised "onepass" option to user-level
 	* band-aided DiaColloDB::WWW::CGI package-global timer reset for standalone server in DiaColloDB::WWW::Handler::cgi

@@ -32,6 +32,7 @@ WriteMakefile
 		    'POSIX' => 0,
 		    'Socket' => 0,
 		    'Template' => 0,
+		    'Template::Plugin::JSON::Escape' => 0, ##-- 0.02
 		    'Time::HiRes' => 0,
 		    'URI' => 0,
 		    'URI::Escape' => 0,
