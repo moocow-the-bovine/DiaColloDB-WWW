@@ -468,7 +468,7 @@ sub uri {
   return URI->new(
 		  #($host ? "http://$host" : "file://")
 		  ($host ? "${scheme}://$host" : "file://") ##-- guess scheme from HTTPS environment variable
-		  .(($scheme eq 'https' && $port==443 : $port==80) ? '' : ":$port")
+		  .($port==($scheme eq 'https' ? 443 : 80) ? '' : ":$port")
 		  .$dbcgi->requestUri
 		 );
 }
