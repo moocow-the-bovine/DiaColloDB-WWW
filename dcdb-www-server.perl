@@ -43,7 +43,7 @@ GetOptions(##-- General
 	   'wwwdir|www-dir|wd|w=s' => \$srv{wwwdir},
 
 	   ##-- logging stuff
-	   'log-level|level|ll=s' => sub { $log{level} = uc($_[1]); },
+	   'log-level|log|level|ll=s' => sub { $log{level} = uc($_[1]); },
 	   'log-option|logopt|lo=s' => \%log,
 	  );
 

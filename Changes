@@ -3,8 +3,10 @@
 ## Change log for perl distribution DiaColloDB::WWW
 
 v0.01.010 Mon, 31 Oct 2016 10:27:54 +0100 moocow
-	* removed literal http:// schemes from embedded links where appropriate,
-	  for painless access via https
+	* renamed score function mi->milf, added score function mi1
+	* added support for 'extend' queries using "profile=extend-RELATION" paramter to profile.ttk
+	* added option alias -log for -log-level
+	* removed literal http:// schemes from embedded links where appropriate, for painless access via https
 
 v0.01.009 Wed, 29 Jun 2016 08:10:09 +0100 moocow
 	* added missing Template::Plugin:JSON::Escape dependency, for cpan install
