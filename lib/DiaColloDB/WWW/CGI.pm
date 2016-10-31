@@ -455,7 +455,7 @@ sub requestQuery { return $_[0]{request_query}; }
 sub httpReferer { return $_[0]{http_referer}; }
 sub httpHost { return $_[0]{http_host}; }
 sub serverAddr { return $_[0]{server_addr}; }
-sub serverPort { return $_[0]{server_port} || 80; }
+sub serverPort { return $_[0]{server_port} || ($ENV{HTTPS} ? 443 : 80); }
 
 ## $uri    = $dbcgi->uri()
 ## $uri    = $dbcgi->uri($uri)
@@ -468,7 +468,7 @@ sub uri {
   return URI->new(
 		  #($host ? "http://$host" : "file://")
 		  ($host ? "${scheme}://$host" : "file://") ##-- guess scheme from HTTPS environment variable
-		  .($port==80 ? '' : ":$port")
+		  .(($scheme eq 'https' && $port==443 : $port==80) ? '' : ":$port")
 		  .$dbcgi->requestUri
 		 );
 }
