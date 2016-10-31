@@ -36,7 +36,7 @@ BEGIN {
 ##======================================================================
 ## globals
 
-our $VERSION = "0.01.009";
+our $VERSION = "0.01.010";
 our @ISA  = qw(DiaColloDB::Logger);
 
 ##======================================================================
@@ -464,7 +464,10 @@ sub uri {
   my $dbcgi = shift;
   my $host = $dbcgi->httpHost // '';
   my $port = $dbcgi->serverPort;
-  return URI->new(($host ? "http://$host" : "file://")
+  my $scheme = ($ENV{HTTPS} ? 'https' : 'http');
+  return URI->new(
+		  #($host ? "http://$host" : "file://")
+		  ($host ? "${scheme}://$host" : "file://") ##-- guess scheme from HTTPS environment variable
 		  .($port==80 ? '' : ":$port")
 		  .$dbcgi->requestUri
 		 );
