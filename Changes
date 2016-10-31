@@ -2,7 +2,7 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
-v0.01.010 Mon, 31 Oct 2016 10:27:54 +0100 moocow
+v0.01.010 Mon, 31 Oct 2016 10:58:29 +0100 moocow
 	* renamed score function mi->milf, added score function mi1
 	* added support for 'extend' queries using "profile=extend-RELATION" paramter to profile.ttk
 	* added option alias -log for -log-level
