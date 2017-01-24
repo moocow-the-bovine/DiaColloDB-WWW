@@ -2,6 +2,9 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
+v0.01.011 Tue, 24 Jan 2017 15:05:39 +0100 moocow
+	* added support for slice-local N (for DiaColloDB >= v0.12.001)
+
 v0.01.010 Mon, 31 Oct 2016 10:58:29 +0100 moocow
 	* renamed score function mi->milf, added score function mi1
 	* added support for 'extend' queries using "profile=extend-RELATION" paramter to profile.ttk
