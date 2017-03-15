@@ -21,7 +21,7 @@ WriteMakefile
 		    'CGI' => 0,
 		    #'CGI::Fast' => 0,
 		    'Cwd' => 0,
-		    'DiaColloDB' => '0.08.003', ##-- 0.08.003
+		    'DiaColloDB' => '0.12.004', ##-- 0.08.003
 		    'Encode' => 0,
 		    'HTTP::Message' => 0, ##-- 6.06
 		    'HTTP::Daemon'  => 0, ##-- 6.01

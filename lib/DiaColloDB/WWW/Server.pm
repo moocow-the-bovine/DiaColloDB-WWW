@@ -25,7 +25,7 @@ use strict;
 ##======================================================================
 ## globals
 
-our $VERSION = "0.01.011";
+our $VERSION = "0.02.001";
 our @ISA  = qw(DiaColloDB::Logger);
 
 ##======================================================================
@@ -43,7 +43,7 @@ our @ISA  = qw(DiaColloDB::Logger);
 ##     ##
 ##     ##-- user data
 ##     wwwdir     => $wwwdir,        ##-- root directory for www wrapper data (default=File::ShareDir::dist_dir("DiaColloDB-WWW")."/htdocs"
-##     dbdir      => $dbdir,         ##-- local DiaColloDB index directory
+##     dburl      => $dburl,         ##-- DiaColloDB client URL (e.g. local indexed directory; alias='dbdir')
 ##     ##
 ##     ##-- logging
 ##     logAttempt => $level,        ##-- log connection attempts at $level (default='trace')
@@ -68,7 +68,7 @@ sub new {
 		   mimetypes => undef, ##-- see prepareLocal()
 
 		   ##-- user data
-		   dbdir => undef,
+		   dburl => undef,
 		   wwwdir => undef, ##-- see prepareLocal()
 
 		   ##-- logging
@@ -83,6 +83,7 @@ sub new {
 		   ##-- user args
 		   @_,
 		  }, ref($that)||$that);
+  $srv->{dburl} = $srv->{dbdir} if ($srv->{dbdir} && !defined($srv->{dburl}));
 
   return $srv;
 }

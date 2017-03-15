@@ -67,7 +67,7 @@ if ($version) {
   print STDERR "$prog version $DiaColloDB::WWW::VERSION by Bryan Jurish\n";
   exit 0 if ($version);
 }
-pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBDIR specified!"}) if (@ARGV < 1);
+pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBURL specified!"}) if (@ARGV < 1);
 
 
 ##----------------------------------------------------------------------
@@ -79,11 +79,11 @@ DiaColloDB::Logger->ensureLog(%log);
 my $logger = 'DiaColloDB::WWW';
 
 ##-- command-line arguments
-my $dbdir = shift;
-$dbdir    =~ s{/$}{};
-$wwwdir //= "$dbdir.www";
+my $dburl = shift;
+$dburl    =~ s{/$}{};
+$wwwdir //= "$dburl.www";
 $wwwdir   =~ s{/$}{};
-
+$wwwdir   =~ s/[^\w\.\-\+]/_/g if (!-d $dburl);
 
 ##-- get source directory via File::ShareDir
 my $srcdir = File::ShareDir::dist_dir('DiaColloDB-WWW');
@@ -120,14 +120,24 @@ $logger->info("setting permissions on $wwwdir");
 chmod_recursive('u+w',$wwwdir)
   or $logger->logdie("failed to update permissions on $wwwdir: $!");
 
-##-- link in 'data' directory
-my $dbdir_abs = abs_path($dbdir);
-$logger->info("linking $wwwdir/data to $dbdir_abs");
-!-e "$wwwdir/data"
-  or unlink("$wwwdir/data")
-  or $logger->logdie("failed to unlink stale $wwwdir/data: $!");
-symlink($dbdir_abs,"$wwwdir/data")
-  or $logger->logdie("failed to create symlink $wwwdir/data -> $dbdir_abs: $!");
+if (-e $dburl) {
+  ##-- dburl: file or dbdir: link to 'data'
+  my $dbdir_abs = abs_path($dburl);
+  $logger->info("linking $wwwdir/data to $dbdir_abs");
+  !-e "$wwwdir/data"
+    or unlink("$wwwdir/data")
+    or $logger->logdie("failed to unlink stale $wwwdir/data: $!");
+  symlink($dbdir_abs,"$wwwdir/data")
+    or $logger->logdie("failed to create symlink $wwwdir/data -> $dbdir_abs: $!");
+} else {
+  ##-- other url: create rcfile
+  $logger->info("creating config file $wwwdir/data for URL '$dburl'");
+  !-e "$wwwdir/data"
+    or unlink("$wwwdir/data")
+    or $logger->logdie("failed to unlink stale $wwwdir/data: $!");
+  DiaColloDB::Utils::saveJsonFile({url=>$dburl},"$wwwdir/data")
+      or $logger->logdie("failed to create config file $wwwdir/data: $!");
+}
 
 ##-- create site.rc
 if ($want_siterc) {
@@ -167,7 +177,7 @@ dcdb-www-create.perl - instantiate apache www wrappers for a DiaColloDB index
 
 =head1 SYNOPSIS
 
- dcdb-www-create.perl [OPTIONS] DBDIR
+ dcdb-www-create.perl [OPTIONS] DBURL
 
  General Options:
    -help                 # this help message
@@ -183,7 +193,7 @@ dcdb-www-create.perl - instantiate apache www wrappers for a DiaColloDB index
 
  Output Options:
    -[no]force            # do/don't force-overwrite existing WWWDIR (default=don't)
-   -output WWWDIR        # create wrapper directory WWWDIR (default=DBDIR.www)
+   -output WWWDIR        # create wrapper directory WWWDIR (default=DBURL.www)
 
  Caveats:
    + you will need to update and reload your apache server configuration after
@@ -201,7 +211,7 @@ dcdb-www-create.perl - instantiate apache www wrappers for a DiaColloDB index
 dcdb-www-create.perl
 instantiates a CGI wrapper directory for the
 L<DiaColloDB|DiaColloDB> index specified by the
-L<DBDIR|/DBDIR> argument in the output directory
+L<DBURL|/DBURL> argument in the output directory
 F<WWWDIR> specified by the L<-output|/-output WWWDIR>
 option.  The directory created can be customized
 by editing the configuration files and then served
@@ -234,10 +244,14 @@ included in the L<DiaColloDB::WWW|DiaColloDB::WWW> distribution.
 
 =over 4
 
-=item DBDIR
+=item DBURL
 
-Local directory containing a L<DiaColloDB::DiaColloDB> index
-to be wrapped, as created by
+L<DiaColloDB|DiaColloDB> database URL to be wrapped,
+which must be supported by L<DiaColloDB::Client|DiaColloDB::Client>,
+i.e. must use one of the supported schemes C<file://>, C<rcfile://>, C<http://>, and C<list://>.
+If no scheme is specified, C<file://> is assumed.
+Typically, I<DBURL> is simply the path to a localL<DiaColloDB|DiaColloDB> index directory
+as created by
 L<dcdb-create.perl(1)|dcdb-create.perl>.
 
 =back
@@ -326,7 +340,7 @@ Do/don't force-overwrite an existing output directory (default=don't).
 =item -output WWWDIR
 
 Specify wrapper output directory F<WWWDIR>.
-Default=F<DBDIR.www>.
+Default=F<DBURL.www>.
 
 =back
 

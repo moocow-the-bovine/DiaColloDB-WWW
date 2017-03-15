@@ -28,3 +28,7 @@
 ^test[0-9]
 \.save\b
 \.save[0-9]
+^diacollo\.svg$
+^dummy\.d
+^pre[\._]
+^testme\.www\b

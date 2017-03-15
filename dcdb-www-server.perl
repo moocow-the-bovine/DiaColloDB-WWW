@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use lib qw(. lib blib/lib lib/lib lib/blib/lib);
+use lib qw(. lib blib/lib lib/lib lib/blib/lib dclib);
 use DiaColloDB::WWW;
 use DiaColloDB::WWW::Server;
 use File::Basename qw(basename);
@@ -52,7 +52,7 @@ if ($version) {
   exit 0 if ($version);
 }
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
-pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBDIR specified!"}) if (@ARGV < 1);
+pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBURL specified!"}) if (@ARGV < 1);
 
 ##==============================================================================
 ## MAIN
@@ -61,13 +61,13 @@ pod2usage({-exitval=>0,-verbose=>0,-msg=>"no DBDIR specified!"}) if (@ARGV < 1);
 ##-- setup logger
 DiaColloDB::Logger->ensureLog(%log);
 
-##-- get dbdir
-my $dbdir = $srv{dbdir} = shift(@ARGV);
-die("$0: cannot access DBDIR $dbdir") if (!-d $dbdir);
+##-- get dburl
+my $dburl = $srv{dburl} = shift(@ARGV);
+die("$0: cannot access local DBURL $dburl") if ($dburl !~ m{^[a-zA-Z0-9]*://} && !-e $dburl);
 
 ##-- create / load server object
 if (defined($srv{wwwdir})) {
-  $srv{dbdir}  = abs_path($srv{dbdir});
+  $srv{dburl}  = abs_path($srv{dburl});
   $srv{wwwdir} = abs_path($srv{wwwdir});
   chdir($srv{wwwdir});
 }
@@ -85,7 +85,7 @@ sub serverMain {
   $srv->prepare()
     or $srv->logdie("prepare() failed!");
   $srv->info("serverMain(): CWD    = ", abs_path(getcwd));
-  $srv->info("serverMain(): DBDIR  = ", abs_path($srv->{dbdir}));
+  $srv->info("serverMain(): DBURL  = ", abs_path($srv->{dburl}) || $srv->{dburl});
   $srv->info("serverMain(): WWWDIR = ", abs_path($srv->{wwwdir} // '(default)'));
   $srv->run();
   $srv->finish();
@@ -109,7 +109,7 @@ dcdb-www-server.perl - standalone HTTP server for DiaColloDB indices
 
 =head1 SYNOPSIS
 
- dcdb-www-server.perl [OPTIONS...] DBDIR
+ dcdb-www-server.perl [OPTIONS...] DBURL
 
  General Options:
   -help                           ##-- show short usage summary
@@ -161,10 +161,14 @@ After successful startup, point your browser at F<http://HOST:PORT>
 
 =over 4
 
-=item DBDIR
+=item DBURL
 
-Local directory containing a L<DiaColloDB::DiaColloDB> index
-to be wrapped, as created by
+L<DiaColloDB|DiaColloDB> database URL to be wrapped,
+which must be supported by L<DiaColloDB::Client|DiaColloDB::Client>,
+i.e. must use one of the supported schemes C<file://>, C<rcfile://>, C<http://>, and C<list://>.
+If no scheme is specified, C<file://> is assumed.
+Typically, I<DBURL> is simply the path to a localL<DiaColloDB|DiaColloDB> index directory
+as created by
 L<dcdb-create.perl(1)|dcdb-create.perl>.
 
 =back
