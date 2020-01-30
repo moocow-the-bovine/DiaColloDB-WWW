@@ -2,7 +2,9 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
-v0.02.004 
+v0.02.004 UNRELEASED
+	Thu, 30 Jan 2020 14:43:37 +0100 moocow
+	* added find.hack a la DiaCollo distro to avoid symlink wonkiness from svn repo
 
 v0.02.003 Mon, 11 Sep 2017 13:28:31 +0200 moocow
 	* wrapper directory template updates to dstar-web v0.34 (svn r27212)
