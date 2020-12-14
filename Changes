@@ -2,8 +2,11 @@
 ##
 ## Change log for perl distribution DiaColloDB::WWW
 
-v0.02.004 UNRELEASED
-	Thu, 30 Jan 2020 14:43:37 +0100 moocow
+v0.02.005 Mon, 14 Dec 2020 11:03:41 +0100 moocow
+	* updated packaged dstar corpus/web to v0.56
+	* added debug table (query parsing) to HTML GUI
+
+v0.02.004 Thu, 30 Jan 2020 14:43:37 +0100 moocow
 	* added find.hack a la DiaCollo distro to avoid symlink wonkiness from svn repo
 
 v0.02.003 Mon, 11 Sep 2017 13:28:31 +0200 moocow
