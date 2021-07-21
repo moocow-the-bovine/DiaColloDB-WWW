@@ -1,0 +1,8 @@
+<a class="navLink" href="."         title="[% root_title %] home">Home</a>
+<a class="navLink" href="hist.perl" title="[% root_title %]: Time Series">Time Series</a>
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]

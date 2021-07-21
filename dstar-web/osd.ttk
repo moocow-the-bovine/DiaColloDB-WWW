@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk"
+%]
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>[% root_title %]</ShortName>
+  <Description>[% root_descr %]</Description>
+  <Tags>[% osd_tags %]</Tags>
+  <Contact>[% root_email %]</Contact>
+  <Query role="example" searchTerms="Haus" />
+[% IF osd_logo %]
+  [% USE image = image(name=osd_logo) %]
+  <Image type="[% image.file_media_type %]" width="[% image.width %]" height="[% image.height %]">[% root_logo %]</Image>
+[% END %]
+[% IF osd_icon %]
+  [% USE image = image(name=osd_icon) %]
+  <Image type="[% image.file_media_type %]" width="[% image.width %]" height="[% image.height %]">[% root_icon %]</Image>
+[% END %]
+  <Url type="application/opensearchdescription+xml" rel="self" template="[% osd_url %]" />
+  <Url type="text/html"  template="[% query_base %]?q={searchTerms}&amp;fmt=html&amp;start={startIndex?}&amp;limit={count?}"/>
+  <Url type="text/plain" template="[% query_base %]?q={searchTerms}&amp;fmt=text&amp;start={startIndex?}&amp;limit={count?}"/>
+  <Url type="application/json" template="[% query_base %]?q={searchTerms}&amp;fmt=json&amp;start={startIndex?}&amp;limit={count?}"/>
+  <Url type="application/yaml" template="[% query_base %]?q={searchTerms}&amp;fmt=yaml&amp;start={startIndex?}&amp;limit={count?}"/>
+  <Url type="application/rss+xml" template="[% query_base %]?q={searchTerms}&amp;fmt=rss&amp;start={startIndex?}&amp;limit={count?}"/>
+  <Url type="application/atom+xml" template="[% query_base %]?q={searchTerms}&amp;fmt=atom&amp;start={startIndex?}&amp;limit={count?}"/>
+[% IF lexdb_enabled %]
+  <!-- suggestion URL(s); see http://www.opensearch.org/Specifications/OpenSearch/Extensions/Suggestions/1.0 -->
+  <Url type="application/x-suggestions+json" template="[% osd_base %]/lexdb/suggest.perl?f=os&amp;q={searchTerms}"/>
+[% END %]
+  <Language>de-de</Language>
+  <InputEncoding>UTF-8</InputEncoding>
+  <OutputEncoding>UTF-8</OutputEncoding>
+</OpenSearchDescription>
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]

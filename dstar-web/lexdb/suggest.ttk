@@ -1,0 +1,139 @@
+[% FILTER null %]
+[%# SET cdb.trace_sql = 1; %]
+[%
+  #------------------------------------------------------------
+  # local dstar parameter overrides
+  DEFAULT
+    cgi.fmt = cdb.vars.f || cdb.vars.fmt;
+%]
+
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "lex-common.ttk"
+%]
+[%# SET cdb.trace_sql = 1; %]
+[%
+  #------------------------------------------------------------
+  # local defaults
+  DEFAULT
+    a     = cdb.vars.index || cdb.vars.attr || ""
+    q     = cdb.vars.term || ""
+    case  = "guess" ##-- 'case': use letter-case for suggestion search?  (letter case is ALWAYS significant for results!)
+    offset = "0"
+    limit = 10
+    f     = cdb.vars.f || cdb.vars.fmt || "json" ##-- 'f': format {os|json-os|os-json}: OpenSearch JSON; {json|flat}: flat GoogleSuggest json, {text|txt}: text, {tsv,csv,1g}:freq+query
+%]
+[% PERL %]
+  #------------------------------------------------------------
+  # post-init
+  my ($cdb,$a,$q,$case,$offset,$limit) = map {$stash->get($_)} qw(cdb a q case offset limit);
+
+  ##-- query prefix
+  my $pq = ($q =~ s/^(.*\s)// ? $1 : '');
+
+  ##-- heuristics: parse query
+  $a ||= $1  if ($q =~ s/^\$([^=]+)=//);
+  do {$a ||= 'w'; $case=1;} if ($q =~ s/^\@//);
+  $a ||= 'l' if ($q =~ s/^\$//);
+
+  ##-- defaults: attribute
+  $a ||= 'l';
+  $case = ($q =~ /[[:upper:]]/) if ($case eq 'guess');
+
+  ##-- sanity check(s)
+  my $min_q_length = $stash->get("min_q_length");
+  die("prefix query-string \`$q' too short (minimum length = $min_q_length)") if (length($q) < $min_q_length);
+
+  ##-- prepare sql
+  $cdb->execsql("pragma case_sensitive_like = 1;");
+  my $qa = $case ? $a : "l$a";
+  my $qq = $case ? $q : lc($q);
+  my %select = (#select=>"$a,f",
+		#from=>$a,
+		where=>("$qa like ".$cdb->escapeSQL("$qq%")),
+		#groupby=>"$a",
+		orderby=>"f desc",
+		offset=>$offset,
+		limit=>$limit,
+		hashrows=>0,
+	       );
+  my ($data);
+  if (grep {$_->[1] eq $a} $cdb->tables()) {
+    ##-- v2 api: 1 table per attribute
+    $data = $cdb->getall(%select, select=>"$a,f", from=>$a);
+  } else {
+    ##-- v1 api: global 'corpus' table with 'group by' clause
+    my $table = (grep {$_->[1] =~ /^(?:lex|corpus)$/} $cdb->tables)[0][1];
+    $data = $cdb->getall(%select, select=>"$a,sum(f) as f", from=>$table, groupby=>"$a");
+  }
+
+  ##-- pre-chew data
+  my ($ddc_escape,$ddc_term_index,$ddc_term_query) = map {$stash->getref($_)} qw(ddc_escape ddc_term_index ddc_term_query);
+  my @sug_values  = map {$pq . $ddc_term_query->($_->[0],$a,$case)} @{$data->{rows}};
+  my @sug_details = map {"$_->[1] hit".($_->[1]>1 ? 's' : '')} @{$data->{rows}};
+  my $sug_term    = $pq . $ddc_term_index->($a) . $q;
+
+  ##-- update stash
+  $stash->update({data=>$data,a=>$a,'q'=>$q,'pq'=>$pq,case=>$case,'qa'=>$qa,'qq'=>$qq,,'sug_values'=>\@sug_values,'sug_details'=>\@sug_details,'sug_term'=>$sug_term});
+[% END %]
+[% END FILTER null %]
+[%
+  IF f=="gs" || f=="gs-json" || f=="json-gs" %]
+[%#---------------------------------------------------------------------
+  # Google Suggest Mode: {gs, gs-json, json-gs}
+%]
+[% cdb.cgi('header','-type'=>'application/json', '-charset'=>'utf-8') %]
+[% PERL %]
+  my $attr   = $stash->get('a');
+  my $aname  = $stash->get('a2name')->{$attr};
+  my $rows   = $stash->get('data.rows');
+  my $values = $stash->get('sug_values');
+  $stash->set('suggest'=>[map {
+    {label=>"$rows->[$_][0] ($rows->[$_][1] / $aname)", value=>$values->[$_]}
+  } (0..$#$rows)]);
+[% END %]
+[% suggest.json %]
+[%
+  ELSIF f=="os" || f=="os-json" || f=="json-os" %]
+[%#---------------------------------------------------------------------
+  # OpenSearch Suggestions mode: {os, os-json, json-os}
+%]
+[% cdb.cgi('header','-type'=>'application/x-suggestions+json') %]
+[% USE JSON::Escape(pretty=>0) %]
+[% SET suggest = [sug_term,sug_values,sug_details]; suggest.json %]
+[%
+  ELSIF f=="txt" || f=="text"  %]
+[%#---------------------------------------------------------------------
+  # raw text (queries only)
+%]
+[% cdb.cgi('header','-type'=>'text/plain') %]
+[% FOREACH sug IN sug_values ; sug _ "\n"; END %]
+[%
+  ELSIF f=="csv" || f=="tsv" || f=="1g" %]
+[%#---------------------------------------------------------------------
+  # frequencies + queries
+%]
+[% cdb.cgi('header','-type'=>'text/plain') %]
+[% FOREACH r IN data.rows ; r.reverse.join("\t") _ "\n"; END %]
+[%
+  ELSE %]
+[%#---------------------------------------------------------------------
+  # Default: Flat Mode: {flat, json}
+%]
+[% cdb.cgi('header','-type'=>'application/json', '-charset'=>'utf-8') %]
+[% USE JSON::Escape(pretty=>0) %]
+[% SET suggest = sug_values; suggest.json %]
+[%
+  END #-- END IF f == "os" || ...
+%]
+
+[%#---------------------------------------------------------------------
+  # Footer
+<!--
+ ;; Local Variables:
+ ;; mode: CPerl
+ ;; coding: utf-8
+ ;; End:
+-->
+%]

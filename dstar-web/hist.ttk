@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+[% FILTER null %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk";
+  SET help_url = "help-hist.perl";
+%]
+[% USE JSON::Escape(pretty=>0) %][%#-- json() pseudo-method %]
+
+[%##---------------------------------------------------------
+  ## local defaults
+%]
+[% DEFAULT
+   cgi.query = query || cgi.query || cgi.qu || cgi.q || cgi.lemma || cgi.l || "";
+   cgi.pformat = cgi.pformat || cgi.pfmt || cgi.pf || cgi.format || cgi.f; #|| defaults.hist.pformat || "svg";
+   cgi.totals = cgi.totals || cgi.T || defaults.hist.totals || "";
+   cgi.single = cgi.single || cgi.sing || cgi.sg || defaults.hist.single ;
+   cgi.grand = cgi.grand || cgi.gr || cgi.g || defaults.hist.grand ;
+   cgi.grid = cgi.grid || defaults.hist.grid ;
+   cgi.norm = cgi.normalize || cgi.norm || cgi.n || defaults.hist.norm || "date+class";
+   cgi.logavg = cgi.logavg || cgi.loga || cgi.la || defaults.hist.logavg || 0;
+   cgi.logproj = cgi.logproj || cgi.logp || cgi.lp || defaults.hist.logproj || 0;
+   cgi.logscale = cgi.logscale || cgi.ls || defaults.hist.logscale || 0;
+#   cgi.window = cgi.window || cgi.win || cgi.w;
+   cgi.wbase = cgi.wbase || cgi.wb || cgi.W || defaults.hist.wbase || 0;
+#   cgi.slice = cgi.sl || 10;
+   cgi.xrange = cgi.xrange || cgi.xr || defaults.hist.xrange || "*:*";
+   cgi.yrange = cgi.yrange || cgi.yr || defaults.hist.yrange || "0:*";
+   cgi.psize  = cgi.psize || cgi.sz || defaults.hist.psize || "840,480";
+   cgi.smooth = cgi.smooth || cgi.sm || defaults.hist.smooth || "none";
+   cgi.points = cgi.points || defaults.hist.points || "";
+   cgi.gaps = cgi.gaps || defaults.hist.gaps || 0;
+#   cgi.prune = cgi.prune || cgi.pr || 0;
+   cgi.style = cgi.style || cgi.sty || cgi.st || ("l" _ (cgi.points ? "p" : ''));
+   cgi.bare = bare || cgi.bare || 0;
+%]
+
+[%##---------------------------------------------------------
+  ## local sanity checks
+%]
+[% PERL %]
+  if (!$stash->get('cgi.pformat')) {
+    if ($ENV{HTTP_USER_AGENT} =~ /MSIE/) {
+      $stash->set('cgi.pformat'=>(grep {($_//'') ne ''} map {$stash->get($_)} qw(defaults.hist.pformat_ie defaults.hist_pformat))[0]//'png');
+    } else {
+      $stash->set('cgi.pformat'=>(grep {($_//'') ne ''} map {$stash->get($_)} qw(defaults.hist.pformat))[0]//'png');
+    }
+  }
+
+  $stash->set('cgi.window'=>(grep {($_//'') ne ''} map {$stash->get($_)} qw(cgi.window cgi.win cgi.w defaults.hist.window))[0]//'');
+  $stash->set('cgi.window'=>3) if (($stash->get('cgi.window')//'') eq '');
+
+  $stash->set('cgi.prune'=>(grep {($_//'') ne ''} map {$stash->get("$_")} qw(cgi.prune cgi.pr defaults.hist.prune))[0]//'');
+  $stash->set('cgi.prune'=>0) if (($stash->get('cgi.prune')//'') eq '');
+
+  ##-- "slice" is a template-toolkit vmethod, so we have to be sneaky about reading parameter of the same name
+  $stash->set('cgi.slice'=>(grep {($_//'') ne ''} (map {$stash->get('cgi')->{$_}} qw(slice sl)), map {$stash->get('defaults.hist')->{$_}} qw(slice sl))[0]//'');
+  $stash->set('cgi.slice'=>10) if (($stash->get('cgi.slice')//'') eq '');
+
+  $stash->set('cgi.query'=>$stash->get('query'));
+  $stash->set('user_query'=>{ (map {($_=>$stash->get("cgi.$_"))} qw(query norm lognorm logavg logscale window wbase slice totals single grand grid xrange yrange psize smooth points gaps prune style bare)), });
+
+  #use Data::Dumper;
+  #print STDERR Data::Dumper->Dump([$stash->get('user_query')],['user_query']);
+[% END %]
+
+[% SET
+  utitle = root_title _ " Time Series";
+  uplot = uuri("dhist-plot.perl", user_query);
+  pformat = cgi.pformat;
+  ukwicx = uuri(query_base, {"fmt"=>"kwic", "q"=>query.replace(" #separate #asc_date","") _ " #separate #asc_date"});
+%]
+
+[% END FILTER null %]
+<html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml" xmlns:os="http://a9.com/-/spec/opensearch/1.1/" xmlns:dta="[% root_ns %]">
+<head>
+ <title>[% utitle %]</title>
+ [% PROCESS "html-head.ttk" %]
+ <script type="text/javascript">
+  /*-- local query parameters --*/
+  user_query   = [% user_query.json() %];
+  user_pformat = [% pformat.json() %];
+
+  /*-- local timing --*/
+  ttk_elapsed = [% elapsed().json() %];
+  </script>
+  <script type="text/javascript">
+\$( dhistReady );
+  </script>
+</head>
+  <body>
+    <div class="outer">
+      [% PROCESS banner %]
+      <div class="headers" style="min-height:3em;">
+	[% PROCESS headerLogo %]
+	<h2>[% utitle %]</h2>
+	<form id="qlform" method="get">
+	  <input type="hidden" id="i_fmt" name="fmt" value="hist"/>
+	  <input type="hidden" id="i_pformat" name="pformat" value="[% pformat %]"/>
+	  <!--<input style="display:none;" type="checkbox" id="i_logproj" name="lp" value="1" title="log-linear projection?"/>-->
+	  <table class="headerTable" style="padding-left:10px;"><tbody>
+	    <tr>
+	      <th>query:</th><td colspan="9"><input type="text" id="i_query" name="q" size="70" title="target query (DDC context-query syntax)" /></td>
+	      <td colspan="1"><input type="submit" name="_s" value="submit"/></td>
+	    </tr>
+	    <tr>
+	      <th>norm:</th>
+	      <td colspan="3">
+		<select style="min-width:18em;" id="i_norm" name="n" title="normalization mode (scaling factor)">
+		  <option value="abs">none (absolute values)</option>
+		  <option value="corpus">corpus</option>
+		  <option value="date">date (slice)</option>
+		  <option value="class">class (genre)</option>
+		  <option value="date+class" selected="1">date+class (default)</option>
+		</select>
+	      </td>
+	      <th>smooth:</th>
+	      <td>
+		<select id="i_smooth" name="smooth" title="graphical smoothing mode (gnuplot)">
+		  <option value="none">none</option><!-- no smoothing -->
+		  <option value="csplines">csplines</option><!--connects consecutive points by natural cubic splines-->
+		  <option value="bezier">bezier</option><!--approximate the data with a Bezier curve of degree n (the number of data points) that connects the endpoints.-->
+		</select>
+	      </td>
+	      <th>single:</th><td><input type="checkbox" id="i_single" value="1" name="sg" title="suppress genre-specific plots?"/></td>
+	      <th>grand:</th><td><input type="checkbox" id="i_grand" value="1" name="gr" title="include a grand-average curve in addition to per-genre plots?"/></td>
+	      <th>grid:</th><td><input type="checkbox" id="i_grid" value="1" name="grid" title="plot grid lines?"/></td>
+	    </tr>
+	    <tr>
+	      <th>slice:</th><td><input  type="text" id="i_slice" name="sl" size="8" title="date slice width (years, years+offset, years-offset)"/></td>
+	      <th>window:</th><td><input type="text" id="i_window" name="w" size="8" title="smoothing window width in slices (0:none)"/></td>
+	      <th>wbase:</th><td><input type="text" id="i_wbase" name="wb" size="8" title="smoothing window inverse-distance weighting coefficient (0:none)"/></td>
+	      <th>logavg:</th><td><input type="checkbox" id="i_logavg" name="la" value="1" title="log-linear smoothing?"/></td>
+	      <th>logscale:</th><td><input type="checkbox" id="i_logscale" name="ls" value="1" title="log-scale y axis?"/></td>
+	      <th>prune:</th><td><input type="text" id="i_prune" name="pr" size="8" title="confidence level for automatic detection of outliers (0-1; 0:no outlier pruning; 1:maximal smoothing)"/></td>
+	    </tr>
+	    <tr>
+	      <th>xrange:</th><td><input type="text" id="i_xrange" name="xr" size="8" title="x axis range (gnuplot syntax)"/></td>
+	      <th>yrange:</th><td><input type="text" id="i_yrange" name="yr" size="8" title="y axis range (gnuplot syntax)"/></td>
+	      <th>psize:</th><td><input type="text" id="i_psize" name="psize" size="8" title="plot image size in pixels (W,H)"/></td>
+	      <!--<th>totals:</th><td><input type="checkbox" id="i_totals" value="1" name="T" title="plot corpus size rather than query distribution (for debugging)?"/></td>-->
+	      <th>bare:</th><td><input type="checkbox" id="i_bare" value="1" name="bare" title="bare-bones plot?"/></td>
+	      <th>points:</th><td><input type="checkbox" id="i_points" value="1" name="points" title="include data points in plot?"/></td>
+	      <th>gaps:</th><td><input type="checkbox" id="i_gaps" value="1" name="gaps" title="allow gaps for &quot;missing&quot; (zero) values?"/></td>
+	    </tr>
+	  </tbody></table>
+	</form>
+	<div style="padding:5px">
+	  [% IF parent_url %]<a class="navLink" href="[% parent_url | url %]" title="[% parent_title | html %]">[% ( parent_label || "Parent" ) | html %]</a>[% END %]
+	  [% IF home_label %]<a class="navLink" href="[% home_url | url %]" title="[% home_title | html %]">[% ( home_label || "Home" ) | html  %]</a>[% END %]
+ 	  <!--<a class="navLink" href="[% osd_base %]" title="[% root_title %] home">Home</a> -->	  
+	  |
+	  <a class="navLink" href="[% uplot('pformat'=>'json') %]" title="[% utitle %]: raw json data">JSON</a>
+	  <a class="navLink" href="[% uplot('pformat'=>'text') %]" title="[% utitle %]: raw tab-separated data">TSV</a>
+	  <a class="navLink" href="[% uplot('pformat'=>'gp') %]" title="[% utitle %]: gnuplot script">GP</a>
+	  <a class="navLink" href="[% ukwicx %]" title="KWIC search for &apos;[% query %]&apos;">KWIC</a>
+	  |
+	  <a class="navLink" href="[% help_url %]">Help</a>
+	</div><!--/linkbar-->
+      </div>
+      <div class="content">
+	<span id="statusMsg" style="display:none"></span>
+	[% IF query %]
+	  [% SET ploturl = uplot("pformat"=>pformat) %]
+	  <img id="plotData" alt="plot" style="display:block" src="[% ploturl | html %]" onerror="plotError()"/>
+	  <a id="plotLink" class="textButton" href="[% ploturl | html %]" style="display:none">DETAILS</a>
+	[% END %]
+      </div>
+      <a id="plotLink" href="[% ploturl | html %]" style="display:none">[% ploturl | html %]</a>
+      <!--/div.content-->
+      [% PROCESS "html-foot.ttk" %]
+    </div>
+    <!--/div.outer-->
+  </body>
+</html>
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+%]

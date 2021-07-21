@@ -1,0 +1,152 @@
+[% FILTER null %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "lex-common.ttk"
+%]
+[% SET html_title = root_title _ ": LexDB" %]
+[%# SET cdb.trace_sql = 1; %]
+[%
+  #------------------------------------------------------------
+  # local defaults
+  DEFAULT
+    select_old  = "w,p,l,f"
+    select  = "*"
+    from    = "lex"
+    where   = ""
+    groupby = ""
+    orderby = "" #f desc
+    offset  = 0
+    limit   = 10
+    data    = cdb.getall("select"=>select, "from"=>from, "where"=>where, "groupby"=>groupby, "orderby"=>orderby, "offset"=>offset, "limit"=>limit, "hashrows"=>1)
+    sql     = data.sql
+    ulocal  = cdb.uuri("view.perl")
+%]
+[% PERL %]
+  #------------------------------------------------------------
+  # post-init
+  my ($cdb,$data) = map {$stash->get($_)} qw(cdb data);
+
+  ##-- nrows
+  $stash->set('nrows' => $cdb->nrows(%{$data->{args}},sql=>undef))
+    if (!defined($stash->get('nrows')) || $stash->get('nrows') eq '');
+[% END %]
+[%#------------------------------------------------------------
+  # header
+%]
+[% END FILTER null %]
+[% cdb.cgi('header','-type'=>'text/html') %]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  [% PROCESS "../html-head.ttk"
+  	autocomplete_options=""
+	cssfiles=["../dbcgi.css", "lexdb.css"]
+	jsfiles=["lexdb.js"]
+	favicon_url=lexdb_icon
+  %]
+  <script type="text/javascript">
+    hrows = [% data.hrows.json %];
+    [% IF lexdb_cab_url %]lexdb_cab_enabled = true;[% END %]
+  </script>
+</head>
+  <body onload="viewInit();">
+    <div class="outer">
+      [% PROCESS banner %]
+      <div class="headers">
+	[% PROCESS headerLogo %]
+	<h1>[% html_title |html %]: View</h1>
+	<form id="qvForm" method="get" action="[% ulocal %]">
+	<table class="headerTable" style="padding-left:10px;"><tbody>
+	  <tr><th>user:</th><td class="monospace">[% HTML.escape(cdb.remote_user) %]</td></tr>
+	  <!-- -->
+	  <tr><th>select:</th><td><input type="text" name="select" size="80" value="[% HTML.escape(select) %]"/></td></tr>
+	  <tr><th>from:</th><td><input type="text" name="from" size="80" value="[% HTML.escape(from) %]"/></td></tr>
+	  <tr><th>where:</th><td><input type="text" name="where" size="80" value="[% HTML.escape(where) %]"/></td></tr>
+	  <tr><th>group by:</th><td><input type="text" name="groupby" size="80" value="[% HTML.escape(groupby) %]"/></td></tr>
+	  <tr><th>order by:</th><td><input type="text" name="orderby" size="80" value="[% HTML.escape(orderby) %]"/></td></tr>
+	  <tr>
+	    <th>offset:</th>
+	    <td>
+	      <input type="text" name="offset" size="5" value="[% HTML.escape(offset) %]"/>
+	      <span class="headerFieldTitle">limit:</span>
+	      <input type="text" name="limit" size="5" value="[% HTML.escape(limit) %]"/>
+	      <input type="submit" name="_s" value="submit"/>
+	    </td>
+	  </tr>
+	</tbody></table>
+	</form>
+	<h2 class="rownums">Record(s) [% offset+1 %]-[% offset+limit > nrows ? nrows : (offset+limit) %] of [% nrows %]</h2>
+	<div class="linkbar">[% PROCESS "lex-links.ttk" %]</div>
+	<!-- -->
+      </div>
+      <!--/div:headers-->
+      <div class="content">
+[%#------------------------------------------------------------
+  # data
+%]
+<div class="vdata">
+ <table class="viewPackOuter packTable"><tbody><tr>
+  [%#------------------------------------------------------------
+    # actual view table
+  %]
+  <td class="viewPackTable">
+  [% IF data.rows.size == 0 %]
+    <h2 class="hlred it">No rows returned for query</h2>
+    <pre>[% data.sql %]</pre>
+  [% ELSE %]
+    <table class="dbViewTable"><tbody>
+      <tr><th/>[% FOREACH c IN data.names %]<th>[% c %]</th>[% END %]</tr>
+      [% SET ri = 1 %]
+      [% FOREACH r IN data.hrows %]
+      <tr class="viewtr" rowid="[% ri - 1 %]">
+	<td>
+	  [% IF lexdb_cab_url %]<a class="textButtonSmall detailsButton" title="Details">Details</a>[%#
+	  %]&nbsp;[%#
+	  %][% END %][%#
+	  %]<a class="textButtonSmall kwicButton" title="DDC KWIC Search">Kwic</a>
+	</td>
+	[% FOREACH c IN data.names %]
+	<td class="viewtd view_[% HTML.escape(c) %] [% c == 'freq' ? '' : 'viewlink' %]">[% HTML.escape(r.$c) %]</td>
+	[% END %]
+      </tr>
+      [% SET ri = ri + 1 %]
+      [% END ##-- foreach r IN data.hrows %]
+    </tbody></table>
+   [% END %]
+   </td><!--/td.viewPackTable-->
+
+   [%#------------------------------------------------------------
+     # details
+   %]
+   [% IF lexdb_cab_url %]
+   <td class="viewPackDetails">
+     <span class="detailsHowto">(click on a data row to display details)</span>
+     <div class="detailsContent hidden">
+       <h2>CAB Analysis</h2>
+       <div class="cabData"></div>
+     </div><!--/div.detailsContent-->
+   </td><!--/td.viewPackDetails-->
+   [% END %]
+ </tr></tbody></table><!--/table.viewPackOuter-->
+</div><!--/div.section.vdata-->
+[%#------------------------------------------------------------
+  # footers
+%]
+      </div>
+      <!--/div:content-->
+      [% PROCESS "../html-foot.ttk" linkbar=0 linkttk="lex-links.ttk" %]
+    </div>
+    <!--/div:outer-->
+  </body>
+</html>
+
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+%]

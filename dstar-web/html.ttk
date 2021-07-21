@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk"
+%]
+[%#------------------------------------------------------------
+  # header
+  #    xmlns:dc="http://purl.org/dc/elements/1.1/"
+  #    xmlns:dcterms="http://purl.org/dc/terms/"
+%]
+[% IF isCountResult; PROCESS "html-counts.ttk"; ELSE %]
+<html
+  lang="en-US" xml:lang="en-US"
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:os="http://a9.com/-/spec/opensearch/1.1/"
+  xmlns:dstar="[% root_ns %]"
+  >
+<head>
+  <title>[% FILTER html %][% '"' _ query _ '" / ' _ root_descr  %][% END %]</title>
+  [% PROCESS "html-head.ttk" %]
+ </head>
+<body onload="dstarSearchInit()">
+    <div id="outer">
+      [% PROCESS banner %]
+      <div id="headers">
+	[% PROCESS headerLogo %]
+	<h1>[% root_descr | html %]</h1>
+	<h2>[% PROCESS hitPageSubheader %]</h2>
+	<!-- -->
+	<div class="linkbar" style="padding:5px;">
+	  [% PROCESS "html-links.ttk" %]
+	</div>
+      </div>
+      <!--/div:headers-->
+      <div id="content">
+[%#------------------------------------------------------------
+  # hits
+%]
+<table class="dtaHitTable">
+[% hit_i = 0 %]
+[% FOREACH hit = hits.hits_ %]
+[% PROCESS "hit.ttk" %]
+<tr class="hit[% (hit_i + 1) % 2 %]" hit_i="[% hit_i %]" base="[% hit.base %]" dstarid="[% hit.id %]" page="[% hit.matches.0.page %]">
+ [% IF hit_thumbs %]
+  <td class="dtaHitThumb">
+    [% IF hit.thumb %]<a href="[% hit.url | html %]"><img src="[% hit.thumb | html %]"/></a>[% END %]
+  </td>
+ [% END %]
+  <td class="dtaHitNumber" style="text-align:right;"><span class="hitNumber">[% startIndex + hit_i %]:</span></td>
+  <td class="dtaHitContent">
+    <div class="hitBibl">[% htmlHitBibl() %]</div>
+    <div class="dtaHitMeta" id="hitMeta[% hit_i %]" style="display:none;">
+      <table><tbody>
+        [% IF hit.node_ %]
+          <tr><th>node_:</th><td>[% hit.node_ | html %]</td></tr>
+        [% END %]
+	[% FOREACH key IN hit.meta_.keys.sort %]
+	 [%
+	    NEXT IF key.match('^(?:indices)_$') ;
+	    NEXT IF key.match('^(?:orig|scan|page)_$') && !hit.meta_.$key ;
+	    SET val = hit.meta_.$key.trim() ;
+	    IF val.match('^(?:https?:)//') ;
+	      SET val = '<a href="' _ val _ '">' _ escapeHTMLbr(val) _ '</a>' ;
+	    ELSE ;
+	      SET val = escapeHTMLbr(val) ;
+	    END ;
+	 %]
+	 <tr><th>[% key %]:</th><td>[% val %]</td></tr>
+	[% END ##--/foreach key in hit.meta_.keys.sort %]
+      </tbody></table>
+    </div>
+    <!--/div.dtaHitMeta-->
+    <div class="dtaHitContext hitText">
+	[% contextString(hit, '<span class="matchedToken">', '</span>',
+		         {
+			  'span'=>['<span>','</span>'],
+			  'titleAttrs'=>title_attrs,
+			  'matchid'=>(useMatchIds ? ['<span class="matchId">','</span>'] : 0)
+			  })
+         %]
+    </div>
+    <!--/div.dtaHitContext-->
+  </td>
+  <!--/div.dtaHitContent-->
+  <td class="dtaHitBtns">
+    <a class="dtaHitExpander" id="hitMeta[% hit_i %]Tgl" title="Toggle meta-data visibility">[more&gt;&gt;]</a>
+  </td>
+  <!--/td.dtaHitMeta-->
+</tr>
+<!--</tr.hit[01]>-->
+[% hit_i = hit_i + 1 %]
+[% END ##--/foreach hit = hits.hits_ %]
+</table>
+      </div>
+      <!--/div:content-->
+      [% PROCESS "html-foot.ttk" linkbar=1 %]
+   </div>
+   <!--/div:outer-->
+  </body>
+</html>
+[% END ##--/if isCountResult %]
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]

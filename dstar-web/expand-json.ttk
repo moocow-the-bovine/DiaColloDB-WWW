@@ -1,0 +1,17 @@
+[%# FILTER collapse %]
+[%
+ #------------------------------------------------------------
+ # globals
+ PROCESS "common.ttk"
+%]
+[%#-------------------------------------------------------------
+%]
+[% to_json(qxl,{'pretty'=>pretty}) %]
+[%# END ##-- end filter collapse %]
+
+[%#--
+  # Local Variables:
+  # mode: CPerl
+  # coding: utf-8
+  # End:
+--%]

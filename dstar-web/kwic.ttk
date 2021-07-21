@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk"
+%]
+[%#------------------------------------------------------------
+  # header
+  #    xmlns:dc="http://purl.org/dc/elements/1.1/"
+  #    xmlns:dcterms="http://purl.org/dc/terms/"
+%]
+[% IF isCountResult; PROCESS "html-counts.ttk"; ELSE %]
+[% BLOCK kwicw %][%
+  IF w.ws %] [% 
+  END %]<span title="[% w.attrs.title |html %]" class="[% w.hl_ ? 'matchedToken' : '' %]">[% w.text |html %][%
+  IF w.hl_ && useMatchIds %]<span class="matchId">[% w.hl_ %]</span>[%
+  END %]</span>[%
+END %]
+<html
+  lang="en-US" xml:lang="en-US"
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:os="http://a9.com/-/spec/opensearch/1.1/"
+  xmlns:dstar="[% root_ns %]"
+  >
+<head>
+  <title>[% FILTER html %][% '"' _ query _ '" / ' _ root_descr  %][% END %]</title>
+  [% PROCESS "html-head.ttk" %]
+</head>
+<body onload="dstarSearchInit()">
+    <div id="outer">
+      [% PROCESS banner %]
+      <div id="headers">
+	[% PROCESS headerLogo %]
+	<h1>[% root_descr | html %]</h1>
+	<h2>[% PROCESS hitPageSubheader %]</h2>        
+	<!-- -->
+	<div class="linkbar" style="padding:5px;">
+	  [% PROCESS "html-links.ttk" %]
+	</div>
+      </div>
+      <!--/div:headers-->
+      <div id="content">
+[%#------------------------------------------------------------
+  # hits
+%]
+<table class="kwicTable">
+[% hit_i = 0 %]
+[% FOREACH hit = hits.hits_ %]
+[% PROCESS "hit.ttk" parseKwic=1 %]
+<tr class="hit[% (hit_i + 1) % 2 %]" hit_i="[% hit_i %]" base="[% hit.base | html %]" dstarid="[% hit.id %]" page="[% hit.matches.0.page %]">
+  <td class="dtaHitNumber" style="text-align:right;"><span class="hitNumber">[% startIndex + hit_i %]:</span></td>
+  <td class="kwicFile dtaHitFile">[[% IF hit.url %]<a href="[% hit.url | html %]">[% END %][% hit.shortlabel | html %][% IF hit.url %]</a>[% END %]]</td>
+  <td class="kwicLHS hitText">[% FOREACH w = hit.kwic.lhs %][% PROCESS kwicw %][% END %]</td>
+  <td class="kwicKW  hitText matchedToken">[% FOREACH w = hit.kwic.kw %][% PROCESS kwicw %][% END %]</td>
+  <td class="kwicRHS hitText">[% FOREACH w = hit.kwic.rhs %][% PROCESS kwicw %][% END %]</td>
+</tr>
+<!--</tr.hit[01]>-->
+[% hit_i = hit_i + 1 %]
+[% END ##--/foreach hit = hits.hits_ %]
+</table>
+    </div>
+    <!--/div:content-->
+[% PROCESS "html-foot.ttk" linkbar=1 %]
+   </div>
+    <!--/div:outer-->
+  </body>
+</html>
+[% END ##--/if isCountResult %]
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]

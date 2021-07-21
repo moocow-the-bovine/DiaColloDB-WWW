@@ -1,0 +1,138 @@
+[% FILTER null %]
+[%#------------------------------------------------------------
+  # File: lex-common.ttk
+  # Description: common variables for d* corpus web/lexdb
+ %]
+[% SET
+    root_dir="../";
+    root_url=cdb.uriDir() _ "/..";
+%]
+[% PROCESS "../common.ttk" %]
+[%# PERL %#
+  ##-- DEBUG
+  print STDERR "LEXDEBUG: --\n";
+  print STDERR map { "LEXDEBUG: $_=".$stash->get($_)."\n" } qw(root_dir root_url root_logo root_icon favicon_url lexdb_icon cdb.uriDir osd_base osd_logo);
+  print STDERR "LEXDEBUG: --\n";
+#% END %]
+
+
+[% USE Dumper %][%#-- debug: Dumper.dump(variable) %]
+[% USE JSON::Escape(pretty=>0) %][%#-- json() pseudo-method %]
+[% SET package = "DbCgi" %]
+[% SET gen_label = "D*/LexDB" %]
+
+[%##-- timing %]
+[% db.t_start() %]
+[% PERL %]
+   $stash->set('elapsed'=>sub { $stash->get('cdb')->t_elapsed() });
+[% END %]
+
+
+[%##---------------------------------------------------------
+  ## local db
+%]
+[% SET
+  cdb.db_dsn = "dbi:SQLite:dbname=lexdb.sqlite"
+  min_q_length = 1
+  a2name = {"u"=>"Utf8Token","w"=>"Token","v"=>"CanonicalToken","p"=>"PartOfSpeech","l"=>"Lemma","f"=>"Frequency"}
+%]
+
+[%##---------------------------------------------------------
+  ## URLs
+%]
+[% SET
+   uview = cdb.uuri("view.perl");
+   uexport = cdb.uuri("export.perl");
+   uinfo = cdb.uuri("dbinfo.perl");
+%]
+
+[%##---------------------------------------------------------
+  ## verbose view / CAB details
+%]
+[% DEFAULT
+     lexdb_cab_url = dstar.lexdb_cab_url || "";
+%]
+
+[%##---------------------------------------------------------
+  ## subroutines
+%]
+[% PERL %]
+  my $dbh = $stash->get('cdb')->dbh();
+
+  ##-- load ICU extension if available
+  my $ext_icu = "/usr/local/lib/sqlite/icu.so";
+  if (-r $ext_icu) {
+     $dbh->sqlite_enable_load_extension(1) if ($dbh->can('sqlite_enable_load_extension'));
+     if ($dbh->can('sqlite_load_extension')) {
+       $dbh->sqlite_load_extension($ext_icu) or warn("failed to load ICU extension $ext_icu: $!")
+     } else {
+       #warn("loading ICU");
+       $stash->get('cdb')->execsql("select load_extension('$ext_icu','sqlite3_icu_init');");
+       #warn("loaded ICU");
+     }
+  }
+
+  ##-- sqlite function 'regreplace(STR, FROM, TO)'
+  if ($dbh->can('sqlite_create_function')) {
+    $dbh->sqlite_create_function('regreplace', 3,
+				 sub {
+				   my ($str,$from,$to) = @_;
+				   $str =~ s{$from}{$to}g;
+				   return $str;
+				 });
+
+    ##-- override DBD::SQLite-provided 'regexp' function for UTF-8
+    $dbh->sqlite_create_function('regexp', 2,
+				 sub {
+				   #my ($re,$str) = @_;
+				   utf8::decode($_[0]) if (!utf8::is_utf8($_[0]));
+				   utf8::decode($_[1]) if (!utf8::is_utf8($_[1]));
+				   return $_[1] =~ $_[0];
+				 });
+
+    $dbh->{sqlite_unicode} = 1;
+  }
+
+  ##-- case-sensitive like (must be called after ICU is loaded)
+  $stash->get('cdb')->execsql("pragma case_sensitive_like = 1;");
+
+
+  ##-- $ddc_sym = escape_ddc($str);
+  my $escape_ddc = sub {
+    my $s = shift;
+    return $s if ($s !~ /\W/);
+    $s =~ s/([\'\\])/\\$1/g;
+    return qq('$s');
+  };
+  $stash->set('escape_ddc'=>$escape_ddc);
+
+  ##-- $ddc_istr = ddc_term_index($index)
+  my $ddc_term_index = sub {
+    my $index = shift;
+    return ($index && $index ne 'w' && $index ne 'Token' ? "\$$index=" : '');
+  };
+  $stash->set('ddc_term_index'=>$ddc_term_index);
+
+  ##-- $ddc_qstr = ddc_term_query($value, [$index='', [$use_case=1]]);
+  my $ddc_term_query = sub {
+    my ($value,$index,$usecase)=@_;
+    $usecase //= 1;
+    return (''
+	    .$ddc_term_index->($index)
+	    #.($usecase
+	    #  ? ('@'.$escape_ddc->($value))
+	    #  #: ('/'.quotemeta($value).'/gi')
+	    #  : (escape_ddc($value).'|case')
+	    .('@'.$escape_ddc->($value))
+	   );
+  };
+  $stash->set('ddc_term_query'=>$ddc_term_query);
+[% END %]
+
+[% END %]
+[%#--
+  # Local Variables:
+  # mode: CPerl
+  # coding: utf-8
+  # End:
+%]

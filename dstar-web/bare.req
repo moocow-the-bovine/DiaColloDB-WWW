@@ -1,0 +1,2 @@
+GET /dstar/dta+dwds/dhist-plot.perl?window=3&norm=date%2Bclass&psize=300%2C180&single=1&smooth=none&pformat=svg&bare=1&query=Bayern
+window=3 norm=date+class psize=300,180 single=1 smooth=none pformat=svg bare=1 query=Bayern

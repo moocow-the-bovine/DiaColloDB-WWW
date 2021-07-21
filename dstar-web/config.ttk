@@ -1,0 +1,46 @@
+[% FILTER null %]
+[% USE JSON::Escape(pretty=>0) %][%#-- json() pseudo-method %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk";
+%]
+
+[% PERL %]
+  use Cwd;
+  my (%vars);
+  my $fmt = lc($stash->get('fmt')) || 'config';
+  $fmt =~ s/^config-?//;
+  $fmt ||= 'all';
+
+  #------------------------------------------------------------
+  # config: stash
+  if ($fmt eq 'all' || $fmt eq 'stash') {
+    my $hv = $vars{stash} = { %$stash };
+    delete @$hv{ 'ENV', grep {/^_/ || /_$/ || UNIVERSAL::isa($hv->{$_},'CODE')} keys %$hv };
+
+  }
+
+  #------------------------------------------------------------
+  # config: env
+  if ($fmt eq 'all' || $fmt eq 'env') {
+    $vars{env} = { %{$stash->get('ENV')} };
+    $vars{env}{PWD} ||= Cwd::getcwd();
+  }
+
+  #------------------------------------------------------------
+  # load siterc.vars
+  if ($fmt =~ /^(?:all|site|auth)$/) {
+    $vars{site} = $stash->get('sitevars');
+    delete @{$vars{site}}{grep {$_ !~ m/^WEB_SITE_(?:AUTH_|ALLOW|.*PUBLIC)/} keys %{$vars{site}}}
+      if ($fmt eq 'auth');
+  }
+
+  #------------------------------------------------------------
+  # stash it
+  $stash->set('config'=>\%vars);
+[% END %]
+[% END ##--/FILTER null %]
+[% PERL %]
+  print JSON::to_json($stash->get('config'), {allow_unknown=>1,allow_blessed=>1,convert_blessed=>1,canonical=>1,pretty=>1});
+[% END %]

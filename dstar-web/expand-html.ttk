@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+[%
+ #------------------------------------------------------------
+ # globals
+ PROCESS "common.ttk"
+%]
+[%#------------------------------------------------------------
+  # header
+  #    xmlns:dc="http://purl.org/dc/elements/1.1/"
+  #    xmlns:dcterms="http://purl.org/dc/terms/"
+%]
+<html
+  lang="en-US" xml:lang="en-US"
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:os="http://a9.com/-/spec/opensearch/1.1/"
+  xmlns:dstar="[% root_ns %]"
+  >
+<head>
+  <title>[% FILTER html %][% '"' _ q _ '"' %] / [% root_title %] Query Lizard[% END %]</title>
+  [% PROCESS "html-head.ttk" %]
+</head>
+  <body onLoad="expandOnLoad();">
+    <div id="outer">
+      [% PROCESS banner %]
+      <div id="headers">
+	[% PROCESS headerLogo %]
+	<h1>[% root_title %] Query Lizard</h1>
+	[% IF q %]<h2>Query Term(s): &quot;[% q | html %]&quot;</h2>[% END %]
+	<!-- -->
+	<div class="linkbar" style="padding:5px;">
+	  [% PROCESS "expand-links.ttk" %]
+	</div>
+      </div>
+      <!--/div:headers-->
+      <div id="content">
+	<div class="section" id="sec.base">
+	  <h2>Base Query</h2>
+	  <form class="queryForm" method="get" action="[% query_base | url %]">
+	  <input type="hidden" name="fmt" value="expand-html"/>
+	  <table class="sep">
+	    <tbody>
+	      <tr>
+		<td class="searchLabel">Query Term(s):</td>
+		<td><input title="Base query term(s): contemporary wordforms, multiple terms separated by whitespace" type="text" name="q" size="64" class="searchText" value="[% q | html %]"/></td>
+		<td><button type="submit" value="_submit">Get Expansions</button></td>
+	      </tr>
+	      <tr>
+		<td class="searchLabel">Expander:</td>
+		<td><input title="Expansion chain: space-separated list of expanders, e.g. &quot;tagh cab case&quot;" type="text" name="x" size="64" class="searchText" value="[% x | html %]"/></td>
+		<td/>
+	      </tr>
+	    </tbody>
+	  </table>
+	  </form>
+	  <p/>
+	</div>
+	<!--/div:sec.base-->
+	[%#-------------------------------------------------------------
+	%]
+	[% IF qxl.size() %]
+	[% SET nxcols = 4; %]
+	[% PERL %]
+	  my $qxl    = $stash->get('qxl');
+	  my $qxh    = $stash->get('qxh');
+	  my $nxcols = $stash->get('nxcols');
+	  my $nqx    = scalar(@$qxl);
+	  my $nxrows = int($nqx / $nxcols) + (($nqx % $nxcols) ? 1 : 0);
+	  my @rows   = map {[]} (1..$nxrows);
+	  my ($rowi,$coli)=(0,0);
+  	  foreach my $qx (@$qxh{@$qxl}) {
+	    $rows[$rowi][$coli] = $qx;
+	    @$qx{qw(row col)} = ($rowi,$coli);
+	    if (++$rowi > $#rows) {
+	      $rowi=0;
+	      ++$coli;
+	    }
+ 	  }
+	  $stash->set('xrows'=>\@rows);
+	[% END %]
+	<div class="section" id="sec.expand">
+	  <h2>Expansions:</h2>
+  	  <form id="xQueryForm" method="get" action="[% query_base | url %]">
+	    <input id="xQueryValue" type="hidden" name="q"/>
+	  </form>
+	  <input type="hidden" name="q" value="[% q | html %]" />
+	  <input type="hidden" name="x" value="[% x | html %]" />
+	  <input type="hidden" name="qx" value="[% qx | html %]" />
+	  <table align="center" style="width:80%; background:#cee8ff;"> <!--#e8e8e8-->
+	    <tbody>
+	      [% FOREACH xcol = xrows %]
+	      <tr>
+		[% FOREACH qx = xcol %]
+		<td><input type="checkbox" class="xcheckbox" value="[% qx.wx %]"/><a href="dstar.perl?q=%40[% qx.ux %]">[% qx.wx %]</a></td>
+		[% END %]
+	      </tr>
+	      [% END %]
+	      <tr>
+		<td colspan="[% nxcols %]">
+		  <button type="button" onClick="setAllExpansions(true);">Enable All</button>
+		  <button type="button" onClick="setAllExpansions(false);">Disable All</button>
+		  <button type="button" onClick="querySubmit();">Search</button>
+		</td>
+	      </tr>
+	    </tbody>
+	  </table>
+	  <p/>
+	</div>
+	<!--/div:sec.expand-->
+	[% END %][%#--/ IF qxl.size() %]
+      </div>
+      <!--/div:content-->
+      [% PROCESS "html-foot.ttk" %]
+    </div>
+    <!--/div:outer-->
+  </body>
+</html>

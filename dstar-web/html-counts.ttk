@@ -1,0 +1,60 @@
+[%# common.ttk already loaded by html.ttk or kwic.ttk %]
+[% SET
+    noaltfmt = 1
+    nohist   = 1
+    caberrLinkEnabled = 0
+%]
+<html
+  lang="en-US" xml:lang="en-US"
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:os="http://a9.com/-/spec/opensearch/1.1/"
+  xmlns:dstar="[% root_ns %]"
+  >
+<head>
+  <title>[% FILTER html %][% '"' _ query _ '" / ' _ root_descr.replace('Search','Counts') %][% END %]</title>
+  [% PROCESS "html-head.ttk" %]
+</head>
+<body onload="dstarSearchInit()">
+    <div id="outer">
+      [% PROCESS banner %]
+      <div id="headers">
+	[% PROCESS headerLogo %]
+	<h1>[% root_descr.replace('Search','Counts') | html %]</h1>
+	<h2>[% PROCESS hitPageSubheader %]</h2>
+	<!-- -->
+	<div class="linkbar" style="padding:5px;">
+	  [% PROCESS "html-links.ttk" %]
+	</div>
+      </div>
+      <!--/div:headers-->
+      <div id="content">
+	[% IF hits.counts_.size() > 0 %]
+	[% SET nkeys = hits.counts_.0.size() - 1 %]
+	<table class="dstarCountsTable">
+	  <tbody>
+	    <tr><th>count</th>[% SET i=1; WHILE i <= nkeys %]<th>key[% i; SET i=i+1 %]</th>[% END %]</tr>
+	    [% FOREACH row = hits.counts_ %]
+	    <tr>
+	      [% FOREACH cell = row %]
+	      <td>[% cell | html %]</td>
+	      [% END %]
+	    </tr>
+	    [% END ##--/foreach row in hits.counts_ %]
+	  </tbody>
+	</table>
+	[% ELSE %]
+	<span class="errorMsg">No rows returned for count() query</span>
+	[% END ##-- /if hits.counts_.size() > 0 %]
+      </div>
+      <!--/div:content-->
+      [% PROCESS "html-foot.ttk" linkbar=1 %]
+    </div>
+    <!--/div:outer-->
+</body>
+</html>
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]

@@ -1,0 +1,1142 @@
+[% FILTER null %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk";
+%]
+
+[%#=====================================================================
+  # config: top-level
+  # %]
+[% SET
+   utitle = root_title _ " Time Series: Help";
+   uplot  = uuri("dhist-plot.perl");
+   uview  = uuri("hist.perl");
+   uqdoc  = uuri("http://odo.dwds.de/~jurish/software/ddc/querydoc.html");
+%]
+[% IF root_url.match('^[a-zA-Z]+:') %]
+     [% SET url_prefix = root_url %]
+[% ELSE %]
+     [% SET url_prefix = "http:" _ root_url %]
+[% END %]
+
+[%#=====================================================================
+  # config: linkbar
+  # %]
+[% BLOCK linkbar %]
+  [% IF parent_url %]<a class="navLink" href="[% parent_url | url %]" title="[% parent_title | html %]">[% ( parent_label || "Parent" ) | html %]</a>[% END %]
+  [% IF home_label %]<a class="navLink" href="[% home_url | url %]" title="[% home_title | html %]">[% ( home_label || "Home" ) | html  %]</a>[% END %]
+  <a class="navLink" href="hist.perl" title="[% root_title %]: Time Series">Time Series</a>
+[% END %]
+
+[%#=====================================================================
+  # config: abbreviations & formatting
+  # %]
+[% PERL %]
+$stash->set('limits'=>sub {
+  my ($lo,$hi) = @_;
+  return qq{<table class="limits"><tbody><tr><td>$hi</td></tr><tr><td>$lo</td></tr></tbody></table>};
+});
+
+$stash->set('frac'=>sub {
+  my ($num,$denom) = @_;
+  return qq{<table class="frac"><tbody><tr><td>$num</td></tr><tr><td>$denom</td></tr></tbody></table>};
+  });
+
+$stash->set('fref'=>sub {
+  my $fmt = shift;
+  return qq{<a href="#f-$fmt">$fmt</a>};
+});  
+
+$stash->set('nref'=>sub {
+  my $n = shift;
+  return qq{<a href="#n-$n">$n</a>};
+});  
+
+$stash->set('pref'=>sub {
+  my $p = shift;
+  return qq{<a href="#$p">$p</a>};
+});
+
+my $ffsub = sub {
+    return qq{<b>f</b>}.(@_ ? "<sub>".join(',',@_)." </sub>" : '');
+};
+$stash->set('ffsub'=>$ffsub);
+
+my $fmsub = sub {
+    return qq{<b>f</b>~}.(@_ ? "<sub>".join(',',@_)." </sub>" : '');
+};
+$stash->set('fmsub'=>$fmsub);
+
+my $ffenw = sub {
+  my @w = @_ ? @_ : ($stash->get('W'));
+  return $fmsub->($stash->get('Q'),$stash->get('S'),$stash->get('O'),@w);
+};
+$stash->set('ffenw'=>$ffenw);
+
+my $ysub = sub {
+   return $stash->get('y').(@_ ? ('<sub>'.join(',',@_).'</sub>') : qw());
+};
+$stash->set('ysub'=>$ysub);
+
+my $yxsub0 = sub {
+   return $ysub->(@_,$stash->get('z')."(0)");
+};
+$stash->set('yxsub0'=>$yxsub0);
+
+[% END %]  
+[% SET
+    
+  N  = "<i>N</i>";
+  Q = "<i>Q</i>";
+  S = "<i>S</i>";
+  O =  "<i>O</i>";
+  U = "<i>U</i>";
+  pmO = "<i>&#x00B1;O</i>";
+  x = "<i>x</i>";
+  y = "<i>y</i>";
+  z = "<i>z</i>";
+  h = "<i>h</i>";
+  D = "<b>date</b>";
+  Dh = D _ "(" _ h _ ")";
+  E = '<b>epoch</b>';
+  epoch = E;
+  inv = '<sup>-1</sup>';
+  iE = E _ inv;
+  C = '<b>class</b>';
+  fclass = C;
+  iC = C _ inv;
+  W = "<i>W</i>";
+  B = "<i>B</i>";
+  i = "<i>i</i>";
+  eps = "<i>&#x025B;</i>";
+  p  = "<i>p</i>";
+
+  #yxz = "<i>y<sub>x,z</sub></i>";
+  yxz = ysub(x,z);
+  yxz0 = ysub(x,z _ "(0)");
+  yxz1 = ysub(x,z _ "(1)");
+  yxzW = ysub(x,z _ "($W)");
+  #yxzWB = y _ "<sub>" _ x _ "," _ z _ "(" _  W  _ "," _ B _ ")</sub>";
+
+  xmin = x _ '<sub>min</sub>';
+  xmax = x _ '<sub>max</sub>';
+  ymin = y _ '<sub>min</sub>';
+  ymax = y _ '<sub>max</sub>';
+
+  fmod  = '<b>mod</b>';
+  floor  = '<b>floor</b>';
+  log  = '<b>log</b>';
+  exp  = '<b>exp</b>';
+  count = '<b>count</b>';
+  avg = '<b>avg</b>';
+  #Expect = '<b class="outline bigop">E</b>';
+  Expect = '<span class="bigop">&#x1D53C;</span>'; ##-- double-struck capital E
+
+  cup = "&#x222A;";
+  cap = "&#x2229;";
+  times = "&#x00D7;";
+  pm    = "&#x00B1;";
+  lfloor = '<span class="bigop">&#x230A;</span>';
+  rfloor = '<span class="bigop">&#x230B;</span>';
+  llbracket = "&#x27E6;";
+  rrbracket = "&#x27E7;";
+  elt = "&#x2208;";
+  le = "&#x2264;";
+  ge = "&#x2265;";
+  neq = "&#x2260;"
+  approx = "&#x2248;"
+  sim = "&#x223C;"
+  Sigma = '<span class="bigop">&#x2211;</span>';
+
+  d = "<i>d</i>";
+  ff = ffsub(Q);
+  Qstar = "<code>*</code>";
+  ffe = ffsub(Q,S,O);
+  coefxz = "<i>C</i><sub>$x,$z</sub>";
+  onem = "10<sup>6</sup>";
+  ffen = fmsub(Q,S,O);
+  ffenW = ffenw(W);
+  ffen0 = ffenw("<code>0</code>");
+  ffenWB = ffenw(W,B);
+  numN = "ℕ";
+  numR = "ℝ";
+  setD = "<i>D</i>";
+  setZ = "<i>Z</i>";
+  to = "→";
+  mapsto = "↦";
+  ellipsis = "…";
+  gamma = "ɣ";
+  alpha = "ɑ";
+
+%]
+  
+[% END ##--/FILTER null %]
+[%# cdb.cgi('header','-type'=>'text/html') %]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>[% utitle %]</title>
+  [% PROCESS "html-head.ttk" %]
+  <style type="text/css">
+.subsection h3:first-child {
+    margin-left: -1em;
+}
+.outline {
+  -webkit-text-fill-color: white; /* Will override color (regardless of order) */
+  -webkit-text-stroke-width: 1px;
+}
+.bigop {
+  font-size: 130%;
+}
+code {
+  margin: 0px;
+  padding: 2px;
+}
+span.math {
+  white-space: nowrap;
+}
+.matheq {
+  display: block;
+  text-align: center;
+}
+.matheq, table.math {
+  margin-top: 0px;
+  margin-bottom: 5px;
+}
+table.math {
+  margin-left: auto;
+  margin-right: auto;
+}
+table.mathsub, table.frac, table.limits {
+  display: inline-table;
+  vertical-align: middle;
+  margin-top: auto;
+  margin-bottom: auto;
+  margin: 2px;
+  border-collapse: collapse;
+}
+table.limits {
+  margin-left: 0px;
+}
+table.limits > tbody > tr > td {
+  text-align: left;
+  vertical-align: middle;
+  font-size: 75%;
+}
+table.frac > tbody > tr:first-child {
+  border-bottom: 1px solid black;
+}
+table.frac > tbody > tr:last-child {
+  border: 0px;
+}
+table.frac > tbody > tr > td {
+  text-align:center;
+}
+table.math td, table.math th {
+  vertical-align: middle;
+}
+sub,sup {
+  /*font-size: 50%;*/
+}
+tr.vjmid > td {
+  vertical-align:middle;
+}
+
+table.varTable {
+  border: 1px solid grey;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+}
+table.varTable > tbody > tr > td, table.varTable th {
+  text-align: left;
+  border-left: 1px solid grey;
+  border-right: 1px solid grey;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+table.varTable th
+{
+  background-color: #000099;/*-- dark blue --*/
+  color: #ffffff; /*-- white --*/
+}
+table.varTable > tbody > tr { 
+  border: none;
+}
+table.varTable > tbody > tr > td:first-child { text-align:center; }
+table.varTable > tbody > tr:nth-child(even) { background-color: #ffffff; }
+table.varTable > tbody > tr:nth-child(odd) { background-color: #cee8ff; }
+  </style>
+</head>
+<body>
+    <div class="outer">
+      [% PROCESS banner %]
+      <div class="headers">
+	[% PROCESS headerLogo %]
+	<h1>[% utitle %]</h1>
+	<div class="linkbar">[% PROCESS linkbar %]</div>
+      </div>
+      <!--/div.headers -->
+
+      <!-- div.content -->
+      <div class="content">
+
+	<!--=================================================-->
+	<div id="toc" class="section headers">
+	  <a name="toc"><h2>Contents</h2></a>
+[% PERL %]
+  $stash->set("toc"=>
+            [
+	     {label=>"Introduction",href=>"#intro",
+	      sub=>[
+	            {label=>"User Interface",href=>"#ui"},
+		    {label=>"REST API",href=>"#api"},
+		   ]},
+	     {label=>"Parameters",href=>"#params",
+	      sub=>[
+		    {label=>"Basic Parameters",href=>"#params-basic"},
+		    {label=>"Format Parameters",href=>"#params-format"},
+		   ]},
+	     {label=>"Output Formats",href=>"#formats",
+	      sub=>[
+	            {label=>"Dataset Formats",href=>"#formats-data"},
+	            {label=>"Plot Formats",href=>"#formats-img"},
+		   ]},
+	     {label=>"Gory Details",href=>"#details",
+	     sub=>[
+		   {label=>"Notation",href=>"#details-notation"},
+		   {label=>"Raw Frequency Data",href=>"#details-raw"},
+		   {label=>"Epoch Partitioning (Date-Slicing)",href=>"#details-slice"},
+		   {label=>"Scaling &amp; Normalization",href=>"#details-norm"},
+		   {label=>"Outlier Detection",href=>"#details-outlier"},
+		   {label=>"Moving-Average Smoothing",href=>"#details-smooth"},
+		   {label=>"Plot Data",href=>"#details-plot"},
+		   ]},
+#	     {label=>"Examples",href=>"#examples",
+#	      sub=>[
+#		    {label=>"Basic Examples",href=>"#ex-basic"},
+#		   ]},
+	     {label=>"See Also",href=>"#seealso",
+	      sub=>[],
+             },
+	  ]);
+[% END %]
+[% toc2html(toc); +%]
+	  <p/>
+	</div>
+	<!-- /div.section#toc -->
+
+	<!--=================================================-->
+	<div class="section" id="intro">
+	  <a name="intro"><h2>Introduction</h2></a>
+	  The D* time series web-service provides a RESTful API and a simple
+	  browser-based user interface for acquisition and display of
+	  time-series data from an associated DDC corpus search engine,
+	  with optional smoothing and outlier detection.
+	  See <a href="#ui">"User Interface"</a> for details on the
+	  browser-based user interface, and see <a href="#api">"REST API"</a>
+	  for details on the underlying RESTful API.
+
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="ui">
+	    <a name="ui"><h3>User Interface</h3></a>
+	    Upon accessing the top-level service URL for a given corpus ( <a href="[% uview %]">[% url_prefix %]/[% uview %]</a> ) in a web browser,
+	    the user is presented with a graphical interface in which queries can be constructed and
+	    submitted to the underlying DDC server.
+	    This section describes the various elements of that interface.
+
+	    <img style="display:block; margin:auto; max-width:95%; padding: 5px;" alt="screenshot" src="images/hist-screenshot-annotated.png"/>
+	    
+	    <dl>
+	      <dt id="ui-form">Query Form</dt>
+	      <dd>
+		The top of the user interface contains a simple HTML query form with input widgets corresponding
+		to the various <a href="#params">parameters</a> of the underlying <a href="#api">REST API</a>.
+		Hovering the mouse over an input widget should cause a tooltip to be displayed
+		briefly describing the corresponding parameter's function.  Changes made to the parameters in
+		the query form will only cause the plot area to be updated after submitting the form
+		by clicking on the "submit" button or pressing the "Enter" key when a text input widget
+		is focused.
+	      </dd>
+
+	      <dt id="ui-buttons">Button Bar</dt>
+	      <dd>
+		The bottom of the header area contains a number of text-mode buttons for navigation and
+		<a href="#formats-data">export</a>
+		of the data-set underlying the current plot display (if any).
+	      </dd>
+
+	      <dt id="ui-plot">Plot Area</dt>
+	      <dd>
+		The main body of the user interface is reserved for the plot image data returned
+		by the underlying <a href="#api">REST API</a> for the parameter set last submitted
+		from the <a href="#ui-form">query form</a>.
+	      </dd>
+
+	      <dt id="ui-footer">Footer</dt>
+	      <dd>
+		The bottom of the user interface contains a footer with some administrative information.
+	      </dd>
+	    </dl>
+	  </div>
+	  <!--/div.subsection#ui-->
+
+	  <!--=================================================-->
+	  <!--<hr/>-->
+	  <div class="subsection" id="api">
+	    <a name="api"><h3>REST API</h3></a>
+	    The underlying REST API is responsible for data acquistition and optional plot image generation,
+	    and can be accessed directly by querying <a href="[% uplot %]">[% url_prefix %]/[% uplot %]</a>
+	    with appropriate <a href="#params">parameters</a>.
+	  </div>
+	  <!--/div.subsection#api-->
+	  
+	</div>
+	<!--/div.section#intro-->
+
+
+	<!--=================================================-->
+	<div class="section" id="params">
+	  <a name="params"><h2>Parameters</h2></a>
+	  The web-service accepts a set of <i>parameter=value pairs</i> for each request and returns a corresponding time series
+	  as a either raw data-set or a two dimensional plot image. Parameters are passed to the service via the
+	  <a href="http://en.wikipedia.org/wiki/Query_string">URL query string</a>
+	  or
+	  <a href="http://en.wikipedia.org/wiki/POST_(HTTP)#Use_for_submitting_web_forms">HTTP POST</a>
+	  request as for a standard
+	  <a href="http://en.wikipedia.org/wiki/Form_(HTML)">web form</a>
+	  (e.g. using the <a href="#ui">browser-based user interface</a>.)
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="params-basic">
+	    <a name="params"><a name="params-basic"><h3>Basic Parameters</h3></a></a>
+	    The following parameters influence the data acquisition and smoothing processes
+	    used to generate the final time series data set.
+
+	    <dl>
+	      <dt id="gaps">gaps</dt>
+	      <dd>
+		Aliases: gaps, gap<br/>
+		Type: Boolean<br/>
+		Default: 0
+		<p/>
+		If true (nonzero), missing data-points $count($x,$z) in the data returned by the DDC query
+		(indicating no hits in any <a href="#unit">date-unit</a> assigned to the epoch $y) will not be generated or passed
+		to gnuplot.  This behavior can lead to unexpected smoothing-phenomena, since gnuplot interpolates
+		over missing $x-axis values.  The default behavior (<code>gaps=0</code>) generates explicit
+		data points $count($x,$z)=0$ (zero) for missing values.
+	      </dd>
+
+	      <dt id="grand">grand</dt>
+	      <dd>
+		Aliases: grand, gr, g<br/>
+		Type: Boolean<br/>
+		Default: 0
+		<p/>
+		If true (nonzero), displays a grand-average curve with pseudo-class "Gesamt"
+		(analogous to that generated by specifying <code><a href="#single">single</a>=1</code>)
+		in addition to the curves for individual text classes.
+	      </dd>
+
+	      <dt id="logavg">logavg</dt>
+	      <dd>
+		Aliases: logavg, loga, la, lognorm, logn, log, ln<br/>
+		Type: Boolean<br/>
+		Default: 0
+		<p></p>
+		If true (nonzero), moving averages will be computed on a logarithmic scale.
+		See "<a href="#details-smooth">Moving-Average Smoothing</a>" for details.
+	      </dd>
+
+	      <!--
+	      <dt>logproj</dt>
+	      <dd>do log-linear projection? (aliases: logproject logp lp); default=0</dd>
+	      -->
+	      
+	      <dt id="norm">norm</dt>
+	      <dd>
+		Aliases: normalize, norm, n<br/>
+		Type: Enum<br/>
+		Values: [%
+		  SET norms = "date+class date class corpus none";
+		  SET nlinks = [];
+		  FOREACH n IN norms.split(' ') ;
+		    nlinks.push( nref(n) );
+                  END;
+		  nlinks.join(", ");
+		 -%]<br/>
+		Default: <code>date+class</code><p/>
+		Categorization mode for selecting frequency-per-million scaling coefficient ${M}.
+		See "<a href="#details-norm">Scaling &amp; Normalization</a>" for details.
+	      </dd>
+
+	      <dt id="offset">offset</dt>
+	      <dd>
+		Aliases: offset, off<br/>
+		Type: Integer<br/>
+		Default: 0
+		<p/>
+		Offset $O of <a href="#slice">slice</a> date-interval boundaries in <a href="#unit">units</a>, which may be negative.
+		If this parameter is specified, it overrides any $pmO suffix notation specified by the <a href="#slice">slice</a> parameter.
+		If the <a href="#offset">offset</a> parameter is not specified and no offset term $pmO is included
+		in the <a href="#slice">slice</a> parameter,
+		but the <a href="#xrange">xrange</a> parameter contains a non-trivial minumum date
+		(<code>xrange=${xmin}:${xmax}</code> with ${xmin}≠<code>*</code>),
+		the offset $O will be assigned a default value ($O = $xmin $fmod $S) such that
+		the initial epoch begins exactly at $xmin, otherwise $O defaults to 0 (zero).
+		See "<a href="#details-slice">Epoch Partitioning</a>" for more details.
+	      </dd>
+
+	      <dt id="prune">prune</dt>
+	      <dd>
+		Aliases: prune, pr<br/>
+		Type: Boolean<br/>
+		Default: 0
+		<p/>
+		Inverse confidence level for outlier detection (0: no pruning, .05: 95% confidence level).
+		See "<a href="#details-outlier">Outlier Detection</a>" for details.
+	      </dd>
+
+	      <dt id="query">query</dt>
+	      <dd>
+		Aliases: query, qu, q, lemma, lem, l<br/>
+		Type: String<br/>
+		<b>REQUIRED</b>
+		<p/>
+	        Target context query in the <a href="[% uqdoc %]">DDC query langauge</a>.
+		The query expression [% Q %] specified to this service should be a "Context Query" (<a href="[% uqdoc %]#query">query_conditions</a>);
+		the actual request sent to the underlying DDC server will be something like:
+		<code>COUNT([% Q %] #SEP) #BY[date/1, textClass]</code>
+	      </dd>
+
+	      <dt id="single">single</dt>
+	      <dd>
+		Aliases: single, sing, sg<br/>
+		Type: Boolean<br/>
+		Default: 0
+		<p/>
+		If true (nonzero), consolidates all corpus-encoded text-classes into a single
+		universal class ("Gesamt"), and displays only the single time series for this
+		pseudo-class.
+	      </dd>
+
+	      <dt id="slice">slice</dt>
+	      <dd>
+		Aliases: sliceby, slice, sl, s<br/>
+		Type: Integer or string<br/>
+		Default: [% defaults.hist.item("slice") || 10 %]
+		<p/>
+		Size $S in <a href="#unit">selected date-resolution units</a> (typically years)
+		of date intervals ("epochs", "slices") into which time series data are to be partitioned.
+		The value of the <code>slice</code> parameter may also optionally contain
+		an <a href="#offset">offset suffix</a> $pmO (i.e. <code>+$O</code> or <code>-$O</code>),
+		where [% "0 &le; |$O| &lt; $S" %], followed by an optional <a href="#unit">date-resolution unit $U</a>,
+		allowing the user to specify the <a href="#slice">slice</a>, <a href="#offset">offset</a>, and <a href="#unit">unit</a>
+		values in a single value-string.
+		See "<a href="#details-slice">Epoch Partitioning</a>" for details.
+	      </dd>
+
+	      <dt id="totals">totals</dt>
+	      <dd>
+		Aliases: totals, tot, T<br/>
+		Default: 0
+		<p/>
+		If true (nonzero), total corpus sizes will be plotted rather than number of hits for the
+		specified <a href="#query">query</a>.
+		Should be equivalent to setting <code>query=*</code>.
+	      </dd>
+
+	      <dt id="unit">unit</dt>
+	      <dd>
+		Aliases: unit, u<br/>
+		Type: Enum<br/>
+		Values: <code>y</code>, <code>m</code>, <code>d</code><br/>
+		Default: <code>y</code>
+		<p/>
+		Specifies the date-resolution unit (minimum duration ⇔ maximum resolution)
+		used together with the <a href="#slice">slice</a> and <a href="#offset">offset</a> parameters
+		for <a href="#details-slice">epoch partitioning</a>.
+		Known values are <code>y</code> (years, default), <code>m</code> (months), and <code>d</code> (days).
+		Earlier versions of this software did not accept this parameter, and were constrained to a maximum resolution of 1 year.
+		If this parameter is specified, it overrides any unit suffix $U specified by the <a href="#slice">slice</a> parameter.
+		<p/>
+		<b>Caveats</b>:
+		Not all corpora support date-resolution units other than the default <code>y</code>
+		(the <a href="https://kaskade.dwds.de/dstar/dta">DTA</a> for example only provide dates at 1-year granularity).
+		For large corpora, use of units other than the default <code>y</code> may lead to proportionately
+		high computational resource consumption (CPU time, RAM, network bandwidth, etc.): please use with caution
+		and consideration.
+		See "<a href="#details-slice">Epoch Partitioning</a>" for more details.
+	      </dd>
+	      
+	      <dt id="wbase">wbase</dt>
+	      <dd>
+		Alaises: wbase, wb, W<br/>
+		Default: 1
+		<p></p>
+		Inverse-distance smoothing base (real number $B) for weighted moving-average smoothing.
+		If the parameter is passed as <code>wbase=0</code>, the default value ($B=1) is used,
+		resulting in a uniform weighting scheme for all epochs contributing to ${yxz}.
+		May also be passed as <code>wbase=e</code> to use the natural exponent
+		$B = <i>e</i> = <b>exp</b>(1) = 2.71828….
+		See "<a href="#details-smooth">Moving-Average Smoothing</a>" for details.
+	      </dd>
+
+	      <dt id="window">window</dt>
+	      <dd>
+		Aliases: window, win, w<br/>
+		Default: [% defaults.hist.window || 0 %]
+		<p></p>
+		Number [% W %] of adjacent epochs (before and/or after) to include in the
+		<a href="https://en.wikipedia.org/wiki/Moving_average">moving-average smoothing window</a>
+		for each data point.
+		See "<a href="#details-smooth">Moving-Average Smoothing</a>" for details.
+	      </dd>
+	     	      
+
+	    </dl>
+	  </div>
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="params-format">
+	    <a name="params-format"><h3>Format Parameters</h3></a>
+	    The following parameters influence only the formatting of the result set,
+	    but have no effect on the dataset itself.
+	    The <a href="#pformat">pformat</a> parameter selects the result format,
+	    the <a href="#pretty">pretty</a> parameter enables or disables pretty-pretting for JSON-mode output,
+	    and the remaining parameters act as wrappers for
+	    <a href="http://www.gnuplot.info/">gnuplot</a> options used
+	    to generate <a href="#formats-plot">plot images</a>.
+	    
+	    <dl>
+	      <dt id="bare">bare</dt>
+	      <dd>
+		Type: Boolean<br/>
+		Default: 0
+		<p/>
+		If true (nonzero), produce a compact "bare" plot for use by <a href="//www.dwds.de">www.dwds.de</a>.
+	      </dd>
+
+	      <dt id="grid">grid</dt>
+	      <dd>
+		Type: Boolean<br/>
+		Default: 0
+		<p/>
+		If true (nonzero), enable gnuplot grid for axis tic-lines.
+	      </dd>
+
+	      <dt id="key">key</dt>
+	      <dd>
+		Aliases: key, legend, leg<br/>
+		Type: String<br/>
+		Default: inside right top
+		<p/>
+		gnuplot legend location; specify <code>key=off</code> or <code>key=none</code> to suppress.
+	      </dd>
+
+	      <dt id="logscale">logscale</dt>
+	      <dd>
+		Aliases: logscale lscale, ls, logy, ly<br/>
+		Type: Integer<br/>
+		Default: 0
+		<p/>
+		Enable or disable log-scale base for gnuplot y-axis.
+		A value of 0 (zero, default) disables log scaling,
+		a value of 1 enables base-2 log scaling,
+		and any other value <code>logscale=<i>b</i></code> enables base-<i>b</i> log scaling.
+	      </dd>
+	      
+	      <dt id="pformat"><a name="format">pformat</a></dt>
+	      <dd>
+		Aliases: pformat, pfmt, pf, format, fmt, f<br/>
+		Type: Enum<br/>
+		Values: [%
+		  SET fmts = "eps epsmono gp json pdf pdfmono png ps psmono svg text";
+		  SET flinks = [];
+		  FOREACH f IN fmts.split(' ') ;
+		    flinks.push( fref(f) );
+                  END;
+		  flinks.join(", ");
+		-%]<br/>
+		Default: <code>svg</code>
+		<p></p>
+		Specifies the desired output format.
+		See "<a href="#formats">Output Formats</a>" for details.
+	      </dd>
+
+	      <!-- json-only options -->
+	      <dt id="pretty">pretty</dt>
+	      <dd>
+		Type: Boolean<br/>
+		Default: 0<p/>
+		If true (nonzero), <a href="#f-json">JSON</a> format output will be pretty-printed.  Primarily useful for debugging.
+	      </dd>
+	      
+	      <dt id="size">size</dt>
+	      <dd>
+		Aliases: psize, psiz, psz, size, siz, sz<br/>
+		Type: String<br/>
+		Default: <code>[% defaults.hist.psize || "640,480" %]</code>
+		<p/>
+		gnuplot output image size <code><i>WIDTH</i>,<i>HEIGHT</i></code> (in pixels).
+	      </dd>
+
+	      <dt id="smooth">smooth</dt>
+	      <dd>
+		Aliases: smooth, sm<br/>
+		Type: Enum<br/>
+		Values: <code>none</code> <code>csplines</code>, <code>bezier</code><br/>
+		Default: <code>none</code>
+		<p/>
+		gnuplot smoothing method, used between supplied data points.
+		Accepted values are <code>none</code>, <c>csplines</c>, and <code>bezeier</code>.
+		The default value <code>smooth=none</code> results in simple linear interpolation between supplied data points.
+	      </dd>
+
+	      <dt id="style">style</dt>
+	      <dd>
+		Type: Enum<br/>
+		Values: <code>lines</code>, <code>points</code>, <code>linespoints</code><br/>
+		Default: lines
+		<p/>
+		gnuplot curve plotting style.
+	      </dd>
+
+	      <dt id="p-title"><a name="title">title</a></dt>
+	      <dd>
+		Type: String<br/>
+		Default: (auto-generated)
+		<p/>
+		gnuplot title; specify <code>title=none</code> to suppress.
+	      </dd>
+
+	      <dt id="xlabel">xlabel</dt>
+	      <dd>
+		Aliases: xlabel, xlab, xl<br/>
+		Type: String<br/>
+		Default: date
+		<p/>
+		 x-axis label; specify <code>xlabel=none</code> to suppress
+	      </dd>
+
+	      <dt id="xrange">xrange</dt>
+	      <dd>
+		Aliases: xrange, xr<br/>
+		Type: String<br/>
+		Default: <code>*:*</code>
+		<p/>
+	        gnuplot x-axis range <code>$xmin:$xmax</code> to be plotted, where
+		$xmin and $xmax are either the minimum and maximum date values to plotted (respectively),
+		or an asterisk character (<code>*</code>) indicating that the limit should
+		be auto-determined by gnuplot.
+	      </dd>
+
+	      <dt id="ylabel">ylabel</dt>
+	      <dd>
+		Aliases: ylabel, ylab, yl<br/>
+		Type: String<br/>
+		Default: (depends on the requested <a href="#norm">normlization mode</a>)
+		<p/>
+	        gnuplot y-axis label; specify <code>ylabel=none</code> to suppress
+	      </dd>
+
+	      <dt id="yrange">yrange</dt>
+	      <dd>
+		Type: String<br/>
+		Aliases: yrange, yr<br/>
+		Default: <code>0:*</code>
+		<p/>
+	        gnuplot y-axis (frequency) range <code>$ymin:$ymax</code> to be plotted, syntax analogous to
+		the <a href="#xrange">xrange</a> parameter.
+	      </dd>
+	    </dl>
+	  </div>
+	</div>
+
+	<!--=================================================-->
+	<div class="section" id="formats">
+	  <a name="formats"><h2>Output Formats</h2></a>
+	  The <a href="#api">REST API</a> supports a number of different output formats for time series data-sets and plot images.
+	  The desired output format can be specified with the <a href="#pformat">pformat</a> parameter.
+	  See "<a href="#formats-data">Dataset Formats</a>" for a list of supported raw data formats,
+	  and see "<a href="#formats-img">Plot Formats</a>" for a list of supported image formats.
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="formats-data">
+	    <a name="formats-data"><h3>Dataset Formats</h3></a>
+	    The following <a href="#pformat">pformat</a> options return the
+	    (smoothed) time-series dataset in a form suitable for further automated
+	    processing.  They will not be displayed correctly in the
+	    <a href="#ui">browser-based user interface</a>.
+	    
+	    <dl style="margin-top:5px;">
+	      <dt id="f-gp">gp</dt>
+	      <dd>
+		Aliases: gnuplot, gp<p/>
+		Returns a standalone <a href="http://www.gnuplot.info/">gnuplot</a> script including data block(s)
+		for the smoothed data.  Used internally to generate the the <a href="#formats-img">plot formats</a>.
+	      </dd>
+	      
+	      <dt id="f-json">json</dt>
+	      <dd>
+		Returns the data-set encoded as a flat <a href="http://www.json.org">JSON</a> array, where each
+		element represents a single data point as an object of the form:
+<pre>{
+  "date" : "1900",              /* epoch label (x) */
+  "class" : "Belletristik",     /* text class (z) */
+  "val" : 123.45,               /* smoothed frequency (y) */
+  "raw" : 109                   /* raw sample count */
+}</pre>
+	      </dd>
+	      
+	      <dt id="f-text">text</dt>
+	      <dd>
+		Aliases: text, txt, tab, tsv, csv, dat<p/>
+	        Returns the dataset as TAB-separated, UTF-8 encoded text.
+		The returned data set contains one line for each data point,
+		and each line is divided into three TAB-separated columns.
+		The first column is the (smoothed) frequency value ($y),
+		the second column is the epoch label ($x), and the final column
+		is the associated text-class ($z).
+	      </dd>
+	    </dl>
+	  </div>	    
+	      
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="formats-img">
+	    <a name="formats-img"><a name="formats-plot"><h3>Plot Formats</h3></a></a>
+	    The following <a href="#pformat">pformat</a> options return two-dimensional
+	    time-series plot images for the given request parameters.  Plot images
+	    are generated by the <a href="http://www.gnuplot.info/">gnuplot</a> program using the
+	    script returned by the <a href="#f-gp">gp</a> format option.
+	    Most of these formats will not be displayed correctly in the
+	    <a href="#ui">browser-based user interface</a> without an appropriate browser plug-in.
+
+	    <dl style="margin-top:5px;">
+	      <dt id="f-eps">eps</dt>
+	      <dd>encapsulated postscript plot</dd>
+
+	      <dt id="f-epsmono">epsmono</dt>
+	      <dd>encapsulated post-script plot, monochrome</dd>
+	      
+	      <dt id="f-pdf">pdf</dt>
+	      <dd>PDF plot (gnuplot, download)</dd>
+	      
+	      <dt id="f-pdfmono">pdfmono</dt>
+	      <dd>PDF plot, monochrome</dd>
+	      
+	      <dt id="f-png">png</dt>
+	      <dd>portable network graphics plot (browser-safe)</dd>
+	      
+	      <dt id="f-ps">ps</dt>
+	      <dd>postscript plot</dd>
+	      
+	      <dt id="f-psmono">psmono</dt>
+	      <dd>postscript plot, monochrome</dd>
+	      
+	      <dt id="f-svg">svg</dt>
+	      <dd>scalable vector graphics plot (browser-safe, default)</dd>
+	    </dl>
+	  </div>
+	</div>
+	
+	<!--=================================================-->
+	<div class="section" id="details">
+	  <a name="details"><h2>Gory Details</h2></a>
+
+	  This section describes the details of the data acquistition and smoothing process.
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="details-notation">
+	    <h3>Notation</h3>
+	    The following table shows variables &amp; notation used in this section.
+	    <table class="varTable"><tbody>
+	      <tr><th>Symbol</th><th>Description</th></tr>
+	      <tr><td>$setD</td><td>set of all dates (<a href="#unit">unit</a>-resolution) in the corpus</td></tr>
+	      <tr><td>$setZ</td><td>set of all text classes in the corpus</td></tr>	      
+	      <tr><td>$numN</td><td>set of all natural numbers (non-negative integers)</td></tr>
+	      <tr><td>$Q</td><td>DDC query expression as given by the [% pref("query") %] parameter</td></tr>
+	      <tr><td>$llbracket$Q$rrbracket</td><td>set of all corpus hits (tokens) for the query $Q</td></tr>
+	      <tr><td>$h</td><td>single corpus hit (token)</td></tr>
+	      <tr><td>$D($h)</td><td>date of hit $h as returned by DDC (<a href="#unit">unit granularity</a>)</td></tr>
+	      <tr><td>$C($h)</td><td>text-class of hit $h as returned by DDC</td></tr>
+	      <tr><td>|<i>$alpha</i>|</td><td>absolute value ($alpha numeric) or set size ($alpha a set)</td></tr>
+	      <tr><td>$ff</td><td>raw corpus-frequency function</td></tr>
+	      <tr><td>$S</td><td>epoch size in <a href="#unit">date-unit</a>s as given by the [% pref("slice") %] parameter</td></tr>	      
+	      <tr><td>$O</td><td>epoch offset in <a href="#unit">date-unit</a>s, as given by the [% pref("offset") %] parameter</td></tr>
+	      <tr><td>$epoch</td><td>epoch partitioning function (date $to epoch)</td></tr>
+	      <tr><td>$epoch$inv</td><td>inverse epoch partitioning function (epoch $to date(s))</td></tr>
+	      <tr><td>$ffe</td><td>epoch-wise corpus frequency function</td></tr>
+	      <tr><td>$coefxz</td><td>frequency-per-million scaling factor, selected by the [%pref("norm")%] parameter</td></tr>
+	      <tr><td>$ffen</td><td>frequency-per-million distribution</td></tr>
+	      <tr><td>$W</td><td>size of moving-average smoothing window in epochs as given by the [%pref("window")%] parameter</td></tr>
+	      <tr><td>$ffenW</td><td>smoothed epoch-wise frequency function with uniform weighting</td></tr>
+	      <tr><td>$ffenWB</td><td>smoothed epoch-wise frequency function with exponential discounting using [% pref("wbase") %]</td></tr>
+	      <tr><td>$x</td><td>epoch label, x-axis plot coordinate, independent variable</td></tr>
+	      <tr><td>$y</td><td>smoothed pseudo-frequency frequency, y-axis plot coordinate, dependent variable</td></tr>
+	      <tr><td>$z</td><td>text class, sub-plot identifier, independent variable</td></tr>
+
+	      <!--
+	      <tr><td>var</td><td>description</td></tr>
+	      <tr><td>$eps</td><td>smoothing constant for log-scaling</td></tr>
+-->
+	    </tbody></table>
+	  </div>
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="details-raw">
+	    <h3>Raw Frequency Data</h3>
+	    The raw sample data
+	    is extracted from a <a href="$uqdoc#count">DDC count()-query</a> such as
+	    <code>COUNT(<a href="#query">$Q</a> #SEP) #BY[date/1,textClass]</code> (for <a href="#unit"><code>unit=y</code></a>)
+	    or
+	    <code>COUNT(<a href="#query">$Q</a> #SEP) #BY[date,textClass]</code> (for <a href="#unit"><code>unit≠y</code></a>).
+	    The raw sample data
+	    is essentially a partial frequency funtion
+	    <span class="math">
+	      $ff : $setD $times $setZ $to $numN
+	      : ($d,$z) $mapsto |{$h ${elt} ${llbracket}${Q}${rrbracket} : $D($h)=$d &amp; $C($h)=$z}|
+	    </span>
+	    mapping independent variable pairs of
+	    date $d (at <a href="#unit">date-unit granularity</a>)
+	    and text-class $z to the raw number of attested
+	    hits (tokens) for [%pref("query")%] $Q in the associated corpus.
+	  </div>
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="details-slice">
+	    <h3>Epoch Partitioning (Date-Slicing)</h3>
+	    The [% pref("slice") %] parameter size $S and offset $O together determine how raw sample dates (at <a href="#unit">date-unit granularity</a>)
+	    are aggregated into independent date intervals ("epochs") for purposes of smoothing and plotting.  A single
+	    aggregated epoch-frequency $ffe($x,$z) will be computed for each pair of epoch ($x) and text-class ($z) in the selected range,
+	    whereby the index of each epoch-label modulo $S will always be equal to that of the offset $pmO (usually zero).
+	    Raw sample dates $d are mapped to epoch-labels $x=$epoch($d), and raw frequencies at <a href="#unit">unit granularity</a> are summed over within each
+	    epoch $x to define the epoch-frequency function $ffe($x,$z):
+	    <table class="math"><tbody>
+	      <tr><td class="jr">$epoch($d)</td><td>= $O + $S $times ${lfloor}($d - $O) / $S${rfloor}</td></tr>
+	      <tr><td class="jr">$ffe($x,$z)</td><td>= $Sigma<sub>$d $elt $epoch$inv($x)</sub> $ff($d,$z)</td></tr>
+	    </tbody></table>
+	    
+	    For example, specifying <code>slice=10</code>, <code>slice=10y</code>, or <code>slice=10+0y</code> requests zero-offset decade epochs,
+	    and would result in epoch-labels 1900, 1910, 1920, etc. representing the date intervals
+	    1900-1909, 1910-1919, 1920-1929, etc.  Requesting <code>slice=100+5y</code> would result in
+	    century epochs offset by 5 years with labels such as 1705 (~1705-1804), 1805 (~1805-1904), 1905 (~1905-2004), etc.
+	    <p/>
+	    As defined above, the $epoch function requires arithmetic operations to be performed on integer dates.
+	    This is straightforward for single-year date resolution (<a href="#unit"><code>unit=y</code></a>):
+	    dates are treated as year designations with respect to the
+	    <a href="https://en.wikipedia.org/wiki/Gregorian_calendar">Gregorian calendar</a>,
+	    which are themselves (possibly negative) integers and can be arithmetically treated as such.
+	    For date arithmetic over finer-grained resolutions such as months (<code>unit=m</code>) or days (<code>unit=d</code>),
+	    this software uses the <a href="https://metacpan.org/pod/Date::Calc">Date::Calc</a> module, which
+	    represents dates at sub-year resolution as the number of days since
+	    Monday 1st January of the year 0001 (<a href="https://en.wikipedia.org/wiki/Rata_Die">Rata Die</a>).
+	    In particular, this means that specifying <code>slice=7d</code> will result in 1 data sample per week (Monday-Sunday),
+	    with epochs labelled by the corresponding Monday.  If you want weekly resolution beginning on Sunday, you can specify
+	    <code>slice=7-1d</code>.
+	  </div>
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="details-norm">
+	    <h3>Scaling &amp; Normalization</h3>
+	    To facilitate comparability of plotted values across (sub)corpora of varying size,
+	    raw epoch frequency counts may be scaled to frequency-per-million-tokens values by
+	    a simple linear projection as requested by the [% pref("norm") %] parameter.
+	    Formally, the [% pref("norm") %] parameter is used to select a scaling factor $coefxz
+	    by which raw epoch frequencies $ffe($x,$z) are mapped to normalized pseudo-frequencies
+	    $ffen($x,$z):
+	    <span class="matheq">
+	      $ffen($x,$z) = [% frac("$ffe($x,$z)","$coefxz") %]
+	    </span>
+	    <p/>
+	    The accepted values for the [% pref("norm") %] parameter populate $coefxz as follows,
+	    for [% ffsub(Qstar) %] the <a href="#details-raw">raw global corpus size function</a>:
+	    <ul style="margin-top:0px;">
+	      <li>
+		<b id="n-date+class">date+class</b>
+		(default): normalize by date interval and text-class;
+		<span class="math">
+		  $coefxz
+		  = [% frac(ffsub(Qstar,S,O) _ "($x,$z)", "$onem") %]
+		  $approx [% frac("<tt>COUNT(* #SEP #ASC_DATE[$x,$x+$S] #HAS[textClass,$z])</tt>", "$onem") %]
+		</span>
+	      </li>
+	      <li id="n-date">
+		<b>date</b>: normalize by date interval only (over all text-classes);
+		<span class="math">
+		  $coefxz
+		  = [% frac("$Sigma<sub>$z' $elt $setZ</sub> " _ ffsub(Qstar,S,O) _ "($x,$z')", onem) %]
+		  $approx [% frac("<tt>COUNT(* #SEP #ASC_DATE[$x,$x+$S])</tt>", onem) %]
+		</span>
+	      </li>
+	      <li id="n-class">
+		<b>class</b>: normalize by text-class only (over all dates)
+		<span class="math">
+		  $coefxz
+		  = [% frac("$Sigma<sub>$d $elt $setD</sub> " _ ffsub(Qstar) _ "($d,$z)", onem) %]
+		  $approx [% frac("<tt>COUNT(* #SEP #HAS[textClass,$z])</tt>", onem) %]
+		</span>		
+	      </li>
+	      <li id="n-corpus">
+		<b>corpus</b>: normalize corpus-globally (over all date intervals and text-classes)
+		<span class="math">
+		  $coefxz
+		  = [% frac("$Sigma<sub>$d $elt $setD, $z' $elt $setZ</sub> " _ ffsub(Qstar) _ "($d,$z)", onem) %]
+		  $approx [% frac("<tt>COUNT(* #SEP)</tt>", onem) %]
+		</span>
+	      </li>
+	      <li id="n-none">
+		<b>none</b>: do not normalize at all, but operate on raw absolute frequency counts;
+		$coefxz = 1
+	      </li>
+	    </ul>
+	  </div>
+	  
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="details-outlier">
+	    <h3>Outlier Detection</h3>
+	    If the [% pref("prune") %] parameter is specified and nonzero,
+	    an error-distribution for the normalized (but unsmoothed) sample points
+	    $ffen($x,$z)
+	    with respect to a
+	    double-<a href="https://en.wikipedia.org/wiki/Exponential_smoothing">exponential filtered</a> "expectation function"
+	    will be computed using two calls to <a href="http://pdl-stats.sourceforge.net/TS.htm#filter_exp">PDL::Stats::TS::filter_exp()</a>
+	    (right-to-left and left-to-right) and averaging these.  The observed "errors" are converted to
+	    $p-values assuming a
+	    <a href="//en.wikipedia.org/wiki/Normal_distribution">normal (Gaussian) distribution</a>,
+	    and all sample points with $p-values outside of the specified
+	    confidence interval are treated as outliers.
+	    Sample points $ffen($x,$z) thus identified as outliers
+	    are removed and replaced by linear interpolation over their nearest non-outlier neighbors.
+	    See <a href="#jurish2016">Jurish (2016)</a> for an example (in German).
+	  </div>
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="details-smooth">
+	    <h3>Moving-Average Smoothing</h3>
+	    To minimize visual interference ("zig-zags") arising from sparse sample data, the pseudo-frequency distribution
+	    data $ffen($x,$z) are passed through a <a href="//en.wikipedia.org/wiki/Moving_average">moving-average smoothing filter</a>
+	    over the immediately adjacent (preceding and following) $W epochs of the corresponding text class as specified by the
+	    [% pref("window") %] parameter, with optional exponential discounting as requested by the [% pref("wbase") %] parameter,
+	    resulting in a smoothed pseudo-frequency distribution $ffenw(·,·).
+	    <p/>
+	    Requesting <code>window=0</code> disables moving-average smoothing:
+	    <span class="matheq">$yxz = $yxz0 = $ffen0($x,$z) = $ffen($x,$z)</span>
+	      <p/>
+	      If <code>window=1</code>, only immediately adjacent epochs of the current text class $z
+	      contribute to $ffenW($x,$z):
+	      <table class="math"><tbody>
+		<tr>
+		  <td>$yxz = $yxz1 = [% ffenw("<code>1</code>") %]($x,$z)</td>
+		  <td>= $avg {[% yxsub0("$x-$S") %] , [% yxsub0("$x") %] , [% yxsub0("$x+$S") %]}
+		  </td>
+		</tr>
+		<tr><td/><td>= [% frac("$ffen($x-$S,$z) + $ffen($x,$z) + $ffen($x+$S,$z)", 3) %]</td></tr>
+	      </tbody></table>
+	      <p/>
+	      In general for <code><a href="#window">window</a>=$W</code> and <code><a href="#slice">slice</a>=$S</code>,
+	      <code><a href="#wbase">wbase</a>=$B</code> with $B $elt {0,1}:
+	      <table class="math"><tbody>
+		<tr>
+		  <td>$yxz = $yxzW = $ffenW($x,$z)</td>
+		  <td>= $avg[%limits("$i=-$W","$W")%] {[% yxsub0("$x+$i$S") %]}</td>
+		  <!--<td>= $avg[%limits("$i=-$W","$W")%] {$ffen($x+$i$S,$z)}</td>-->
+		</tr>
+		<tr><td/><td>= [% frac(1,"1+2$W&#xa0;") _ Sigma _ limits("$i=-$W",W) _ " $ffen($x+$i$S,$z)" %]</td></tr>
+	      </tbody></table>
+	      <p/>
+	      <!--~~~~~~~~ -->
+	      <h4 id="details-smooth-wbase" style="margin-bottom:0px;">Exponential Discounting</h4>
+	      If a nontrivial [% pref("wbase") %] parameter <code>wbase=$B</code> is specified (${B}${neq}1),
+	      neighboring epochs' contributions to the data-point $ffenW($x,$z)
+	      are weighted by inverse distance to the target epoch along the $x$ axis:
+	      <table class="math"><tbody>
+		<tr>
+		  <td>$yxz = $yxzW = $ffenWB($x,$z)</td>
+		  <td>= [% Expect _ limits("$i=-$W","$W") _ " [$B<sup> -|$i&#xa0;|</sup>] " _ yxsub0("$x+$i$S") %]</td>
+		  <!--<td>= [% Expect _ limits("$i=-$W","$W") _ " [$B<sup> -|$i&#xa0;|</sup>] $ffen($x+$i$S,$z)" %]</td>-->
+		</tr>
+		  <tr>
+		    <td/><td>= [% frac(Sigma _ limits("$i=-$W","$W") _ " $B<sup> -|$i&#xa0;|</sup> $ffen($x+$i$S,$z)",
+		                       "1 + 2$Sigma" _ limits("$i=1",W) _ " $B<sup> -$i</sup>") %]</td>
+		  </tr>
+	      </tbody></table>
+	      <!--~~~~~~~~ -->
+	      <p/>
+	      <h4 id="details-smooth-logavg" style="margin-bottom:0px;">Log Averaging</h4>
+	      If the [% pref("logavg") %] option is specified and nonzero, moving averages will be computed
+	      for the natural logarithms of the scaled pseudo-frequencies and subsequently re-projected
+	      onto the original value domain, using a constant $eps to avoid singularities (default $eps=0.5):
+	      <table class="math"><tbody>
+		<tr><td class="jr">$yxz0</td><td>= $log($ffen($x,$z) + $eps)</td></tr>
+		<tr><td class="jr">$yxz</td><td>= $exp($yxzW) - $eps</td></tr>
+	      </tbody></table>
+	  </div>
+	  
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="details-plot">
+	    <h3>Plot Data</h3>
+	    The final data to be plotted are triples
+	    ($x,$yxz,$z) of epoch label $x, smoothed pseudo-frequency ${y}, and text-class ${z}.
+	    In <a href="#formats-img">gnuplot-generated image formats</a>, adjacent data points
+	    of each text-class $z will be connected by line segments.
+	  </div>
+	</div>
+	<!--/div.section#details-->
+
+	<!--=================================================-->
+<!--
+	<div class="section" id="examples">
+	  <a name="examples"><h2>Examples</h2></a>
+          <div class="subsection" id="ex_basic">
+	    <h3><a name="ex-basic">Basic Examples</a></h3>
+	    todo
+	  </div>
+	</div>
+-->
+	<!--=================================================-->
+	<div class="section" id="seealso">
+	  <a name="seealso"><h2>See Also</h2></a>
+	  <ul>
+	    <li>
+	      <a href="http://odo.dwds.de/~moocow/software/ddc/ddc_query.html">DDC query language</a> documentation
+	    </li>
+	    <li>
+	      <a href="//www.dwds.de/r/plot">DWDS Verlaufskurve</a>: alternative interface for the
+	      "<a href="//kaskade.dwds.de/dstar/public">public</a>" corpus,
+	      and its <a href="//www.dwds.de/d/plot">documentation</a> (in German).
+	    </li>
+	    <li>
+	      gnuplot <a href="http://www.gnuplot.info/docs_4.6/gnuplot.pdf">manual</a>
+	      and <a href="http://www.gnuplot.info/faq/index.html">FAQ</a>
+	    </li>
+	    <li id="jurish2016">
+	      Jurish, B. <a href="http://kaskade.dwds.de/~jurish/pubs/jurish-verlaufskurven-2016-05-31.pdf">"DWDS Wortverläufe"</a>.
+	      Talk presented at the
+	      Berlin-Brandenburgische Akademie der Wissenschaften,
+	      31st May, 2016.
+	      (in German)
+	    </li>
+	  </ul>
+
+	</div>
+	<!--/div.section#references-->
+	
+      </div>
+      <!--/div.content-->
+      [% SET html_foot = root_dir _ "html-foot.ttk" %]
+      [% PROCESS $html_foot linkbar=0 linkttk="linkbar" %]
+      <script type="text/javascript">ttk_elapsed = 0 [%# cdb.t_elapsed.json %];</script>
+    </div>
+    <!--/div.outer-->
+  </body>
+</html>
+[%#--
+ ;; Local Variables:
+ ;; mode: nxml
+ ;; coding: utf-8
+ ;; End:
+%]

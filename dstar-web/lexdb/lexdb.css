@@ -1,0 +1,198 @@
+/*======================================================================
+ * Overrides
+ */
+body,h1,h2,h3,h4,h5,h6,p,center,td,th,ul,dl,div {
+  font-family: Arial Unicode MS, Bitstream Vera Sans, Arial, Helvetica, sans-serif;
+}
+h2 { font-size: large; font-weight: bold; }
+
+/*-----------------------------------------------------------------
+ * headers
+ */
+table.headerTable, table.headerTable th, table.headerTable td {
+  border-collapse: collapse;
+  border-spacing: 0px 0px;
+  padding: 0px;
+}
+table.headerTable {
+  margin-left: 10px;
+}
+table.headerTable th {
+  padding-right: 4px;
+}
+.dbStatus { 
+  float: right;
+  text-align: right;
+  font-style: italic;
+  color: #ff0000;
+  padding: 4px;
+}
+
+h2.rownums {
+  font-size:normal;
+  font-weight:normal;
+  padding:0;
+  float:right;
+}
+
+/*-----------------------------------------------------------------
+ * linkbar(s)
+ */
+div.linkbar {
+  margin:5px;
+  margin-left: 10px;
+}
+div.headers div.linkbar {
+  margin: 10px;
+  margin-left: 20px;
+}
+.sbsep { 
+  padding: 2px;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+.navLink, .navLinkDisabled {
+  margin: 0;
+  padding: 1px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+/*-----------------------------------------------------------------
+ * view column alignment
+ */
+.dbViewTable td {
+  text-align: left;
+  padding-left: .5em;
+  padding-right: .5em;
+}
+td.view_f { text-align: right; }
+
+td.viewtd.vewlink {
+  background-color: #00ffff;
+}
+tr.viewtr:hover {
+  /*cursor: help; */
+  cursor: pointer;
+  /*border: 2px solid blue;*/
+}
+
+
+/*-----------------------------------------------------------------
+ * view table
+ */
+tr.viewtr:nth-child(even) { background-color: #ffffff; }
+tr.viewtr:nth-child(odd) { background-color: #ccccff; }
+tr.viewtr.hovering { background-color: #00ffff; }
+
+.mokGood { }
+tr.viewtr:nth-child(odd) > td.mokGood { }
+
+.mokBad { background-color:#ffcccc; }
+tr.viewtr:nth-child(odd) > td.mokBad { background-color:#ffaaaa; }
+
+.mokUgly { background-color:#ffff00; }
+tr.viewtr:nth-child(odd) > td.mokUgly { background-color:#ffcc00; }
+
+.mokMulti { background-color:#ffff00; }
+tr.viewtr:nth-child(odd) > td.mokMulti { background-color:#ffcc00; }
+
+.mokMulti { background-color:#99ffff; }
+tr.viewtr:nth-child(odd) > td.mokMulti { background-color:#00ffff; }
+
+table.packTable {
+  border-collapse: separate;
+  border-spacing: 4px 4px;
+  margin: 0px;
+  padding: 0px;
+  /*width: 100%;*/
+}
+
+.packTable > tbody > tr > td { 
+  margin: 0px;
+  padding: 0px;
+}
+
+.viewPackDetails { 
+  border: 1px solid grey;
+  background-color: #e8e8e8;/*-- light grey --*/
+}
+.detailsTable { 
+  /*border: 1px solid grey;*/
+  margin-left: .5em;
+  margin-right: .5em;
+  min-width: 16em;
+}
+
+.detailsHowto { 
+  font-style: italic;
+  margin: .5em;
+  color: #0000ff;
+}
+.detailsTable th { 
+  color: #000099;
+  text-align: right;
+  max-width: 1em;
+}
+.detailsContent h2 {
+  margin-left: .5em;
+  margin-right: .5em;
+}
+/*
+th.propTitle {
+  color: #ffffff !important;
+  background-color: #000099;
+  border: 1px solid #000099;
+  text-align: center;
+}*/
+
+/*-----------------------------------------------------------------
+ * cab data stuff
+ */
+.cabData {
+  font-family: monospace;
+  padding: 5px;
+  margin: 5px;
+  background-color: #ffffff;
+}
+
+.cabComment,.cabText,.cabAttr { display:block; }
+.cabComment, .cabTextType { 
+  font-style: italic;
+  color: #990000;
+}
+.cabTextType { 
+  float: right;
+}
+.cabText { 
+  /*border-top: 1px solid grey;*/
+  background-color: #e8e8e8;/*-- light grey --*/
+  margin-top: .5em;
+  font-size: large;
+  font-weight: bold;
+  text-decoration: none; !important
+  /*color: #000099;*/
+}
+.cabAttr { 
+  margin-left: 2em;
+}
+.cabAttrName { 
+  margin-right: .5em;
+  /*color: #666666;*/ /*-- hldis: disabled-text --*/
+  color: #808080; /*-- hlg: grey-text --*/
+  /*color: #009900; *//*-- hldarkgreen: dark-green text --*/
+}
+.cabAttr.exlex {
+  background-color: #ccffcc;
+}
+
+/*-----------------------------------------------------------------
+ * generic clickables
+ */
+[onclick] { cursor:pointer; }
+[onclick]:hover {
+  background-color: #ffbb75;  /*light orange*/
+}
+

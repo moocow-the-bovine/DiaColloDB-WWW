@@ -1,0 +1,147 @@
+[% FILTER null %]
+[%#------------------------------------------------------------
+  # File: sem-common.ttk
+  # Description: common variables for d* corpus web/semcloud
+%]
+[% DEFAULT cgi = cdb.vars %]
+[% SET
+    root_dir="../";
+    root_url=cdb.uriDir() _ "/..";
+%]
+[% PROCESS "../common.ttk" %]
+
+[% USE date %]
+[% USE HTML %]
+[% USE URL %]
+[%# USE Dumper %][%#-- debug: Dumper.dump(variable) %]
+[% USE JSON::Escape(pretty=>1) %][%#-- json() pseudo-method %]
+[% SET package = "DbCgi" %]
+
+[% SET gen_label = "D*/SemCloud" %]
+[% DEFAULT
+   package = "DbCgi"
+   version = "???"
+   uhome = "./"
+   ulabel = gen_label
+   uversion = VERSION
+   ucontact = root_email
+%]
+
+
+[%##---------------------------------------------------------
+  ## DB (dummy)
+%]
+[% SET
+   cdb.db_dsn = ""; #"dbi:CSV:"; #"dbi:SQLite:dbname=data/dta-lex.sqlite"
+%]
+
+[% PERL %]
+  ##-- environment
+  $stash->set(ENV=>\%ENV);
+[% END %]
+
+[%##-- timing %]
+[% cdb.t_start() %]
+[% PERL %]
+   $stash->set('elapsed'=>sub { $stash->get('cdb')->t_elapsed() });
+[% END %]
+
+[%##---------------------------------------------------------
+  ## URLs
+%]
+[% DEFAULT
+  ##
+  dstar_url_base = dstar.www_url _ "/dstar.perl";
+  dtaq_url_base = "http://kaskade.dwds.de/dtaq";
+  semq_url_base = dstar.www_url _ "/semcloud/semq.perl";
+  semq_url_local = "./semq.perl";
+%]
+[% SET
+   udta = cdb.uuri(dstar_url_base);
+   ukwic = cdb.uuri(dstar_url_base, {fmt=>"kwic"});
+%]
+
+[%##---------------------------------------------------------
+  ## dtaq links
+%]
+[% PERL %]
+  $stash->set('dtaq_page_url',
+	      sub {
+		my ($dtadir,$page) = @_;
+		my $ubase = $stash->get('dtaq_url_base');
+		return $ubase if (!$dtadir);
+		return "$ubase/book/show/$dtadir" if (!$page); #http://www.deutschestextarchiv.de/dtaq/book/show/marx_kapital01_1867
+		return "$ubase/book/view/$dtadir?p=$page"; #http://www.deutschestextarchiv.de/dtaq/book/view/16793?p=8
+	      });
+[% END %]
+
+[%##---------------------------------------------------------
+  ## local defaults
+%]
+[% SET
+   mapdir = "dc-pages-map.d"
+%]
+[%##-- query parameters
+  ## q  = QUERY
+  ## to = WHICH  ##-- one of qw(terms docs cats)
+  ## k  = KBETS
+  ## b  = BASE   ##-- for dist-to-probability mapping (Boltzmann)
+  ## beta = TEMP ##-- for dist-to-probability mapping (Boltzmann)
+  ## color = COLOR ##-- either "color" or "mono"
+%]
+[% SET
+   fmt  = cgi.format || cgi.fmt || cgi.f || "json"
+%]
+[% DEFAULT
+   q  = ""
+   to = to || mapto || "cats"
+   k  = k || n || 50
+   b    =  2
+   beta = -1
+   color = "color"
+%]
+
+[%##---------------------------------------------------------
+  ## local sanity checks
+%]
+[% PERL %]
+  #use Data::Dumper;
+  $stash->set('user_query'=>{ (map {($_=>$stash->get($_))} qw(q to k b beta)), });
+  #print STDERR "user_query = ", Data::Dumper->Dump([$stash->get('user_query')],['user_query']);
+
+  ##-- "dta" link target
+  $stash->set('udtax'=>sub {
+		my $mapto = $stash->get('to');
+		my $q     = $stash->get('q');
+		if ($mapto =~ /^t/i) {
+		  #return $stash->{udta}->({q=>"\$l=$q",fmt=>"kwic"});
+		  my $qq = $stash->get('cdb')->sqstring("$q@".$stash->get('k'));
+		  return $stash->{udta}->({q=>"\$l=$qq|semsim",fmt=>"kwic"});
+		}
+		$q =~ s/^(?i:doc|page|pag|cls|class|cat|book|volume|vol)[=:]//;
+		if ($mapto =~ /^[dp]/i) {
+		  my ($dir,$page) = ($q =~ /^(.*)\.([0-9]+)$/ ? ($1,$2) : ($q,0));
+		  return $stash->get('dtaq_url_base')."/book/view/${dir}/?p=$page";
+		}
+		elsif ($mapto =~ /^[cbv]/i) {
+		  return $stash->get('dtaq_url_base')."/book/show/$q";
+		}
+		return $stash->get('dstar_url_base');
+	      });
+[% END %]
+[% SET
+   uterms  = cdb.uuri("terms.perl");
+   utermsx = cdb.uuri("terms.perl", {'k'=>k, 'b'=>b, 'beta'=>beta});
+   udocsx  = cdb.uuri("docs.perl", {'k'=>k, 'b'=>b, 'beta'=>beta});
+   ucatsx  = cdb.uuri("cats.perl", {'k'=>k, 'b'=>b, 'beta'=>beta});
+   usemqx  = cdb.uuri("semq.perl", {'k'=>k, 'b'=>b, 'beta'=>beta, 'to'=>to});
+%]
+
+
+[% END %]
+[%#--
+  # Local Variables:
+  # mode: CPerl
+  # coding: utf-8
+  # End:
+%]

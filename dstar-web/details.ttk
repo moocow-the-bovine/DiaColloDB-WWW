@@ -1,0 +1,1152 @@
+[% FILTER null %]
+[% USE JSON::Escape(pretty=>0) %][%#-- json() pseudo-method %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk";
+%]
+
+[%#=====================================================================
+  # config: top-level
+  # %]
+[% SET
+    utitle = root_title _ " Details";
+    uqdoc  = uuri("//kaskade.dwds.de/~jurish/software/ddc/querydoc.html");
+    uopt   = uuri("//kaskade.dwds.de/~jurish/software/ddc/ddc_opt.html");
+%]
+
+[%#=====================================================================
+  # data: status, info
+  # %]
+[% PERL %]
+  my $cli = $stash->get('client')
+    or die("ERROR: no ddc client object defined");
+  $cli->open()
+    or die("ERROR: could not connect to DDC server on $cli->{connect}{PeerAddr}:$cli->{connect}{PeerPort}: $!");
+  my $status = $cli->status()
+    or die("ERROR: could not retrieve DDC server status: $!");
+  my $info = $cli->info()
+     or die("ERROR: could not retrieve DDC server status: $!");
+  $stash->set('status'=>$status);
+  $stash->set('info'=>$info);
+
+  ##-- alias resolution
+  sub aresolve {
+    my ($key,$alias) = @_;
+    return $key if (!defined($key) || !defined($alias));
+    my $n=0;
+    while (defined($alias->{$key})) {
+      last if ($n++ >= 100);
+      $key = $alias->{$key};
+    }
+    return $key;
+  }
+
+  ##-- uniq list
+  sub luniq {
+    my ($tmp);
+    return map {defined($tmp) && $tmp eq $_ ? qw() : ($tmp=$_)} sort grep {defined($_)} @_;
+  }
+
+  ##-- sum over list
+  sub lsum {
+    my $sum = 0;
+    $sum += $_ foreach (grep {defined($_)} @_);
+    return $sum;
+  }
+
+  ##-- hash inversion
+  sub hinvert {
+    my $h  = shift;
+    my $hi = {};
+    push(@{$hi->{$h->{$_}}},$_) foreach (keys %$h);
+    return $hi;
+  }
+
+  ##-- generic operator defaults
+  my %opdefault = (
+		   '_'=>'Token',
+		   '@_'=>'Token',
+		   '/_/'=>'Token',
+		   '%_'=>'Lemma',
+		   '[_]'=>'MorphPattern',
+		   ':{_}'=>'Thes',
+		   '^_'=>'Chunk',
+		   '<_'=>'Token',
+		   '*'=>'Token',
+		   '.'=>undef, #-- 1st break collection
+		  );
+
+  ##-- get list of all physical subcorpora
+  my @phys  = qw();
+  my @stack = @{$info->{corpora}};
+  my ($c);
+  while (defined($c=shift(@stack))) {
+    unshift(@stack,@{$c->{corpora}}) if ($c->{corpora});
+    push(@phys,$c) if ($c->{indexed});
+  }
+
+  ##-- debug
+  #print STDERR Data::Dumper->Dump([$status,$info],[qw(status info)]);
+
+  ##-- parse common info
+  my $cinfo = {
+	       nsubs=>scalar(@{$info->{corpora}}),
+	       nphys=>scalar(@phys),
+	       mmap=>0, ##-- number of physical corpora with 'mmap':1
+	       breaks=>[],
+	       indices=>[],
+	       collections=>[],
+	       bibl=>[],
+	       expand=>[],
+	       opdefaults=>{},
+	       user=>{},
+	      };
+  my @cnames = qw(); ##-- corpus names
+  my %name2break = qw();
+  my %name2expand = qw();
+  my %iavail = qw(); ##-- $longOrShortOrAlias => { n=>$sortIndex, name=>$longOrShortOrAlias, corpora=>{$corpusName=>\%corpusIndexInfo, ...}, ... }
+  my %bavail = qw(); ##-- $nameOrAlias => { n=>$sortBibl, name=>$nameOrAlias, corpora=>{$corpusName=>\%corpusBiblInfo, ...}, ... }
+  my ($key);
+  foreach $c (@phys) {
+    ##-- corpus names
+    push(@cnames,$c->{name});
+
+    ##-- timestamp
+    $cinfo->{indexed} = $c->{indexed} if ($c->{indexed} ge ($cinfo->{indexed}//''));
+
+    ##-- counters: basic
+    foreach $key (qw(nfiles nmasked nsources ntokens mmap)) {
+      $cinfo->{$key} += $c->{$key} if (defined($c->{$key}));
+    }
+
+    ##-- breaks
+    my ($b,$bname,$cb);
+    foreach my $b (@{$c->{breaks}}) {
+      next if ($b->{shortname} eq 'textarea');
+      $bname = "$b->{shortname} $b->{longname}";
+      if (!defined($cb = $name2break{$bname})) {
+	push(@{$cinfo->{breaks}}, ($cb = $name2break{$bname} = { key=>$bname, longname=>$b->{longname}, shortname=>$b->{shortname} }));
+      }
+      $cb->{size} += $b->{size};
+      ++$cb->{nphys};
+      ++$cb->{ndefault} if ($b eq $c->{breaks}[0]);
+    }
+
+    ##-- expanders
+    my ($x,$cx);
+    foreach my $x (@{$c->{expanders}}) {
+      if (!defined($cx = $name2expand{$x})) {
+	push(@{$cinfo->{expand}}, ($cx = $name2expand{$x} = { name=>$x }));
+      }
+      ++$cx->{nphys};
+    }
+
+    ##-- token attributes: local alias resolution
+    my %ialias = (map { $_->{alias} ? ($_->{alias}=>$_->{ref}) : ($_->{longname}=>$_,$_->{shortname}=>$_) } @{$c->{indices}});
+    $_->{key} = "$_->{longname} $_->{shortname}" foreach (grep {$_->{longname}} @{$c->{indices}});
+
+    ##-- token attributes: availability (long or short or alias)
+    my ($i,$iref);
+    foreach $i (@{$c->{indices}}) {
+      next if (!defined($iref = $i->{longname} ? $i : ($i->{ref} ? aresolve($i->{ref},\%ialias) : undef)));
+      foreach (grep {defined($_)} @$i{qw(longname shortname alias)}) {
+	$iavail{$_}{n} = scalar(keys %iavail) if (!defined($iavail{$_}{n}));
+	$iavail{$_}{name} //= $_;
+      }
+      $iavail{$i->{longname}}{corpora}{$c->{name}} = $iref if ($i->{longname});
+      $iavail{$i->{shortname}}{corpora}{$c->{name}} = $iref if ($i->{shortname});
+      $iavail{$i->{alias}}{corpora}{$c->{name}} = $iref if ($i->{alias});
+    }
+
+    ##-- bibl attributes: local alias resolution
+    my %balias = (map { $_->{alias} ? ($_->{alias}=>$_->{ref}) : ($_->{name}=>$_) } @{$c->{bibl}});
+
+    ##-- bibl attributes: availability
+    my ($bref);
+    my %bconst = qw();
+    foreach $b (@{$c->{bibl}}) {
+      next if (!defined($bref = $b->{name} ? $b : ($b->{ref} ? aresolve($b->{ref},\%balias) : undef)));
+      foreach (grep {defined($_)} @$b{qw(name alias)}) {
+	$bavail{$_}{n} = scalar(keys %bavail) if (!defined($bavail{$_}{n}));
+	$bavail{$_}{name} //= $_;
+	$bavail{$_}{corpora}{$c->{name}} = ($_ eq $bref->{name} ? $bref : {%$bref, visible=>0});
+	$bconst{$_} = $b->{value} if (exists($b->{value}));
+      }
+    }
+
+    ##-- operator defaults
+    my $cops = $c->{opdefault};
+    foreach my $opkey (keys %opdefault) {
+      my $op = ($cinfo->{opdefaults}{$opkey} //= { key=>$opkey });
+      my $ix = $cops->{$opkey} // $opdefault{$opkey};
+      next if ($opkey eq '<_' && !$c->{allowUnsafeQueries});
+      next if ($opkey eq '*');
+      if ($opkey eq '.') {
+	$ix //= $c->{breaks}[0]{longname};
+	next if (!$ix || !grep {$_->{longname} eq $ix || $_->{shortname} eq $ix} @{$c->{breaks}});
+      }
+      else {
+	next if (!$ix || !exists($iavail{$ix}{corpora}{$c->{name}}));
+      }
+      warn("resolved Thes -> $ix for corpus $c->{name}") if ($ix eq 'Thes');
+      $op->{corpora}{$c->{name}} = $ix;
+    }
+
+    ##-- user info
+    my $cuser = $c->{user};
+    foreach my $bkey (qw(src cab index index.orig timestamp)) {
+      my $bval  = $c->{user}{build}{$bkey} || '(undefined)';
+      (my $bval0 = $bval) =~ s/\|.*$//;
+      $cinfo->{user}{"build-$bkey"}{$bval0}{bycorpus}{$c->{name}} = $bval;
+    }
+    $c->{user}{maintainer} //= '(undefined)';
+    $c->{user}{curator}    //= '(undefined)';
+    foreach my $ukey (grep {$_ !~ /^(?:build|collectionInfo)$/} keys %{$c->{user}}) {
+      $cinfo->{user}{$ukey}{$c->{user}{$ukey}}{bycorpus}{$c->{name}} = JSON::to_json($c->{user}{$ukey},{allow_nonref=>1,canonical=>1,pretty=>0,utf8=>0});
+    }
+
+    ##-- collection info
+    push(@{$cinfo->{collections}},
+	 ($bconst{collection}//'(unknown collection)')."\t".($c->{user}{collectionInfo}//'(no information provided)'));
+  }
+  $info->{common} = $cinfo;
+
+  ##-- breaks: trim
+  @{$cinfo->{breaks}} = grep {$_->{longname} ne 'clause' && $_->{nphys}==$cinfo->{nphys}} @{$cinfo->{breaks}};
+
+  ##-- expanders: trim
+  @{$cinfo->{expand}} = map {$_->{name}} grep {$_->{nphys}==$cinfo->{nphys}} @{$cinfo->{expand}};
+  $cinfo->{name2expand} = { map {($_=>$name2expand{$_})} @{$cinfo->{expand}} };
+
+  ##-- operator defaults: trim
+  delete @{$cinfo->{opdefaults}}{map {$_->{key}} grep {scalar(keys %{$_->{corpora}}) != $cinfo->{nphys}} values %{$cinfo->{opdefaults}}};
+  foreach my $op (values %{$cinfo->{opdefaults}}) {
+    my $i2corpora = hinvert($op->{corpora});
+    $op->{vals} = [
+		   map {
+		     my $i = $_;
+		     {attr=>$i, corpora=>[luniq map {s/[0-9]{0,2}$//; $_} @{$i2corpora->{$i}}]}
+		   } keys %$i2corpora
+		  ];
+  }
+
+  ##-- user info: trim
+  foreach my $ukey (sort keys %{$cinfo->{user}}) {
+    foreach my $uval (keys %{$cinfo->{user}{$ukey}}) {
+      my $val2corpus = hinvert($cinfo->{user}{$ukey}{$uval}{bycorpus});
+      $cinfo->{user}{$ukey}{$uval}{vals} = [
+					    luniq
+					    map {
+					      my $cname = $_;
+					      $cname =~ s/[0-9]{0,2}$//;
+					      $cname.'@'.$cinfo->{user}{$ukey}{$uval}{bycorpus}{$_}
+					    } keys %{$cinfo->{user}{$ukey}{$uval}{bycorpus}}
+					   ];
+    }
+    delete $cinfo->{user}{$ukey}
+      if ($ukey eq 'build-index.orig'
+	  && scalar(keys %{$cinfo->{user}{$ukey}})<=1
+	  && (keys %{$cinfo->{user}{$ukey}})[0] eq '(undefined)');
+  }
+  #print STDERR Data::Dumper->Dump([$cinfo->{user}],[qw(user)]);
+
+  ##-- token attributes: trim
+  delete @iavail{ grep {scalar(keys %{$iavail{$_}{corpora}}) != $cinfo->{nphys}} keys %iavail };
+
+  ##-- token attributes: sanitize
+  my %id2index = qw(); ##-- index-id to index
+  my ($ia,$ci);
+  foreach my $ia (sort {$a->{n}<=>$b->{n}} values %iavail) {
+    my @ikeys = map {$_->{key}} @{$ia->{corpora}}{@cnames};
+    my $iid   = join(' + ',@ikeys);
+    if (defined($ci=$id2index{$iid})) {
+      push(@{$ci->{aliases}},$ia->{name});
+    }
+    else {
+      push(@{$cinfo->{indices}}, $ci = $id2index{$iid} = {name=>$ia->{name},size=>0});
+      #$ci->{iid}  = $iid;
+      $ci->{phys} = [luniq map {$_->{key}} values %{$ia->{corpora}}];
+      $ci->{size} = lsum(map {$_->{size}} values %{$ia->{corpora}});
+      $ci->{nvis} = lsum(map {$_->{visible} || 0} values %{$ia->{corpora}});
+      $ci->{visible} = ($ci->{nvis}==$cinfo->{nphys} ? "yes" : ($ci->{nvis}==0 ? "no" : "sometimes"));
+    }
+  }
+
+  ##-- bibl: trim
+  delete @bavail{ grep {scalar(keys %{$bavail{$_}{corpora}}) != $cinfo->{nphys}} keys %bavail };
+
+  ##-- bibl attributes: sanitize
+  my %id2bibl = qw(); ##-- bibl-id to bibl
+  my ($ba,$cb);
+  foreach my $ba (sort {$a->{n}<=>$b->{n}} values %bavail) {
+    my @bkeys = map {$_->{name}} @{$ba->{corpora}}{@cnames};
+    my $bid   = join(' + ',@bkeys);
+#    if (defined($cb=$id2bibl{$bid})) {
+#      push(@{$cb->{aliases}},$ba->{name});
+#    }
+#    else {
+      push(@{$cinfo->{bibl}}, $cb = $id2bibl{$bid} = {name=>$ba->{name},size=>0});
+      $cb->{iid}  = $bid;
+      $cb->{phys} = [luniq map {$_->{name}} values %{$ba->{corpora}}];
+      $cb->{size} = lsum(map {$_->{size}} values %{$ba->{corpora}});
+      $cb->{nvis} = lsum(map {$_->{visible} || 0} values %{$ba->{corpora}});
+      $cb->{visible} = ($cb->{nvis}==$cinfo->{nphys} ? "yes" : ($cb->{nvis}==0 ? "no" : "sometimes"));
+      $cb->{nconst} = lsum(map {defined($_->{value}) ? 1 : 0} values %{$ba->{corpora}});
+      $cb->{const}  = ($cb->{nconst}==$cinfo->{nphys} ? 1 : 0);
+#    }
+  }
+
+  ##-- bibl attributes: sort (xbibl not available yet)
+  #@{$cinfo->{bibl}} = sort {($xbibl->{$a->{name}{port}||0) <=> ($xbibl->{$b->{name}}{port}||0) || ($a->{name} cmp $b->{name})} @{$cinfo->{bibl}};
+
+  ##-- collections: trim
+  @{$cinfo->{collections}} = map {[split(/\t/,$_,2)]} luniq(@{$cinfo->{collections}});
+
+  ##-- debug
+  #print STDERR Data::Dumper->Dump([$cinfo->{indices}],[qw(indices)]);
+  #print STDERR Data::Dumper->Dump([$cinfo->{indices}],['indices']);
+  #print STDERR Data::Dumper->Dump([$cinfo->{collections}],['collections']);
+  #print STDERR Data::Dumper->Dump([$cinfo->{bibl}],[qw(bibl)]);
+[% END %]
+
+
+[%#=====================================================================
+  # formatting: human-readability
+  #   + override in CORPUS.ttk with e.g. SET details.bibl.foo = {descr=>"foo descr"}
+  # %]
+[% PERL %]
+  use Time::Duration;
+  use Date::Parse;
+  use POSIX;
+
+  my $fmt_datetime = sub {
+    return POSIX::strftime("%F %H:%M:%S%z", localtime(Date::Parse::str2time($_[0])));
+  };
+  $stash->set('fmt_datetime'=>$fmt_datetime);
+  my $fmt_si = $stash->{si_str};
+
+  my $qdoc = $stash->get('uqdoc');
+  sub qref { return join(', ', map {"<a href=\"${qdoc}#${_}\">$_</a>"} @_); }
+  sub qrref { return join(', ', map {"<a href=\"${qdoc}#rule_${_}\">$_</a>"} @_); }
+  sub qpref { return '('.qref(@_).')' }
+  sub qprref { return '('.qrref(@_).')' }
+
+  $stash->set('qref'=>\&qref);
+  $stash->set('qpref'=>\&qpref);
+  $stash->set('qrref'=>\&qrref);
+  $stash->set('qprref'=>\&qprref);
+
+  ##-- generic value-formatting sub (for status, basic info)
+  $stash->set('valfmt' => sub {
+		my ($key,$val,$xtable) = @_;
+		#print STDERR "valfmt(key=$key ; val=$val ; xtable=$xtable\n";
+		return $xtable->{$key}{fmt}->($val) if ($xtable->{$key}{fmt});
+		return $stash->{escapeHTML}->($val);
+	      });
+
+  ##-----------------------------------------------------------
+  ## details: defaults
+  my $details_default = {};
+
+  ##-----------------------------------------------------------
+  ## details: status
+  $details_default->{status} =
+  {
+
+   "name" => {"descr"=>"symbolic name for the underlying DDC server process (syslog label)"},
+   "version" => {"descr"=>"DDC library version for the underlying DDC server process"},
+   "compat" => {descr=>"server compatibility mode"},
+   "started" => {descr=>"time of last server re-start",
+		 fmt=>$fmt_datetime,
+		},
+   "uptime" => {"descr"=>"time since last server re-start",
+		fmt=>\&Time::Duration::duration_exact,
+	       },
+   "nrequests" => {"descr"=>"total number of client requests processed by the underlying DDC server",
+		   fmt=>$fmt_si,
+		  },
+   "nqueries" => {"descr"=>"total number of query requests processed by the underlying DDC server",
+		  fmt=>$fmt_si,
+		 },
+   "nerrors" => {"descr"=>"total number of failed client requests (e.g. due to parse errors)",
+		 fmt=>$fmt_si,
+		},
+   "nslow" => {"descr"=>"total number of slow client requests and logged as such",
+	       fmt=>$fmt_si,
+	      },
+   "qtavg" => {"descr"=>"running average query processing time",
+	       fmt=>sub { $fmt_si->(shift,unit=>'s') },
+	      },
+   "nworkers" => {descr=>"number of concurrent client worker thread(s)"},
+   "hitstrings" => {descr=>"evaluation mode for hit-string retrieval (serial or parallel)"},
+   "memkb" => {key=>"mem", "descr"=>"memory resident set size used by the underlying DDC server (total non-swapped physical memory used)",
+	       fmt=>sub { $fmt_si->($_[0]*1024,unit=>'B') },
+	      },
+   "navcachesize" => {descr=>"current size of internal navigation hint cache",
+		      fmt=>$fmt_si
+		     },
+   "corpora" => {"descr"=>"number of sub-corpora contributing to this corpus",
+		 fmt=>sub {
+		   ($stash->get('info.common.nsubs')." logical"
+		    ." ~ "
+		    .$stash->get('info.common.nphys')." physical")
+		 },
+		},
+   mmap=>{descr=>"number of memory-mapped physical sub-corpora",
+	  fmt=>sub {
+	    ($stash->get('info.common.mmap')
+	     ." / "
+	     .$stash->get('info.common.nphys'))
+	  },
+	 },
+  };
+
+  ##-----------------------------------------------------------
+  ## details: site
+  $stash->set('site' => $stash->get('sitevars'));
+  $details_default->{site} =
+    {
+     WEB_SITE_ALIAS => {descr=>'list of URL path aliases for this web instance'},
+     ##
+     "WEB_SITE_ALLOW" => {descr=>'implicitly allow access from these host(s) and/or domain(s)'},
+     "WEB_SITE_PUBLIC" => {descr=>'allow public access from all hosts without prior authorization?'},
+     "WEB_SITE_FORCE_PUBLIC" => {descr=>'force-allow public access (overrides server defaults)?'},
+     "WEB_SITE_AUTH_LABEL" => {descr=>'symbolic label for HTTP authorization realm (typically "DWDS website" or "D*")'},
+     "WEB_SITE_AUTH_PROVIDER" => {descr=>'ordered list of provider module(s) for HTTP authorization ("file" and/or "external")'},
+     "WEB_SITE_AUTH_EXTERNAL" => {descr=>'external HTTP authorization method if enabled by WEB_SITE_AUTH_PROVIDER (e.g. "auth_dwdsdb")'},
+     ##
+     WEB_HIST_ENABLED => {descr=>'enable time-series histogram web-wrappers?'},
+     WEB_HIST_PUBLIC => {descr=>'allow public access to time-series histogram web-wrappers?'},
+     WEB_CACHE_STATIC => {descr=>'use static, read-only cache for time-series histograms?'},
+     WEB_CACHE_UNITS => {descr=>'supported resolution unit(s) for time-series histograms (y,m,d)?'},
+     ##
+     WEB_DIACOLLO_ENABLED => {descr=>'enable DiaCollo web-wrappers?'},
+     WEB_DIACOLLO_PUBLIC => {descr=>'allow public access to DiaCollo web-wrappers?'},
+     ##
+     WEB_LEXDB_ENABLED => {descr=>'enable LexDB web-wrappers?'},
+     WEB_LEXDB_PUBLIC => {descr=>'allow public access to LexDB web-wrappers?'},
+     ##
+     WEB_SEMCLOUD_ENABLED => {descr=>'enable SemCloud web-wrappers?'},
+     WEB_SEMCLOUD_PUBLIC => {descr=>'allow public access to SemCloud web-wrappers?'},
+     ##
+     WEB_STATS_ENABLED => {descr=>'enable corpus statistics web-wrappers?'},
+     WEB_STATS_PUBLIC => {descr=>'allow public access to corpus statistics web-wrappers?'},
+    };
+
+  ##-----------------------------------------------------------
+  ## details: info (basic)
+  $details_default->{info} =
+  {
+   #nsubs=>{descr=>"number of immediate logical subcorpora"},
+   #nphys=>{descr=>"total number of physical subcorpora (direct or indirect)"},
+   indexed=>{descr=>"timestamp of youngest physical sub-corpus (*._con mtime)",
+	     fmt=>$fmt_datetime,
+	    },
+   nfiles=>{descr=>"total number of indexed files",
+	    fmt=>$fmt_si,
+	   },
+   nsources=>{descr=>"total number of source files during index compilation",
+	      fmt=>$fmt_si,
+	     },
+   nmasked=>{descr=>"total number of masked corpus files (indexed but not displayed)",
+	     fmt=>$fmt_si,
+	    },
+   ntokens=>{descr=>"total number of indexed tokens",
+	     fmt=>$fmt_si,
+	    },
+  };
+
+  ##-----------------------------------------------------------
+  ## details: user
+  $details_default->{user} =
+  {
+   'build-src'=>{descr=>'version identifier(s) for D* TEI-XML corpus sources'},
+   'build-cab'=>{descr=>'version identifier(s) for D* CAB resources used during corpus build'},
+   'build-index'=>{descr=>'version identifier(s) for most recent D* DDC index update'},
+   'build-index.orig'=>{descr=>'version identifier(s) for initial D* DDC index build'},
+   'build-timestamp'=>{descr=>'timestamp(s) of D* DDC index compilation'},
+   'changes'=>{descr=>'local corpus change-log (deprecated)'},
+   'maintainer'=>{descr=>'corpus infrastructure maintainer(s)'},
+   'curator'=>{descr=>'corpus content curator(s)'},
+   'porter'=>{descr=>'corpus porter(s)'},
+   'lang'=>{descr=>'corpus content language'},
+  };
+
+  ##-----------------------------------------------------------
+  ## details: breaks
+  $details_default->{breaks} =
+  {
+   's sentence'=>{descr=>"single sentence or sentence-like unit"},
+   'c clause'=>{descr=>"single sentential clause"},
+   'p paragraph'=>{descr=>"single paragraph or paragraph-like unit"},
+   'file file'=>{descr=>"single input document (e.g. article, volume)"},
+   'u utterance'=>{descr=>"single utterance (spoken corpora)"},
+  };
+
+  ##-----------------------------------------------------------
+  ## details: token attributes (attrs)
+  my $stts     = qq{<a href="http://www.ims.uni-stuttgart.de/forschung/ressourcen/lexika/TagSets/stts-table.html">STTS</a>};
+  my $stts_dwds = qq{$stts - <a href="//www.dwds.de/d/korpussuche#pos">DWDS dialect</a>};
+  my $udpos    = qq{<a href="http://universaldependencies.org/u/pos/">UD</a>};
+  $details_default->{attrs} =
+  {
+   'Token'=>{descr=>"token surface text"},
+   'Utf8'=>{descr=>"literal UTF-8 token surface text"},
+   'CanonicalToken' => {descr=>"DTA::CAB-normalized modern equivalent wordform"},
+   'Lemma'=>{descr=>"lemma for the source token as returned by CAB+moot+TAGH; typically the default attribute for bareword queries"},
+   'Pos'=>{descr=>"part-of-speech tag for the source token (typically $stts_dwds)"},
+   'Rend'=>{descr=>"typographical ('rendition') attributes for the source token as a '|'-separated set"},
+   'WordSep'=>{descr=>"Boolean attribute, '1' (one) if the source token text is immediately preceded by whitespace, otherwise '0' (zero)"},
+   ##
+   ##-- DTA attributes
+   Coord=>{descr=>"bounding box(es) for the source token, if available"},
+   Page=>{descr=>"page (scan) identifier, not to be confused with DDC-internal <tt>page_</tt> counter"},
+   Context=>{descr=>("text-structural properties of the source token as a lexicographically sorted, '|'-separated list or '-' for the empty set."
+		     ." Supported properties: text, front, body, back, head, foot, end, argument, hi, cit, fw, lg, stage, speaker, formula, table, note_foot, note_left, note_right, and note_other."),
+	     #descr_old=>"Formerly supported properties: left",
+	    },
+   XPath=>{descr=>"Canonical XPath to the deepest element node containing the first character of the source token, modulo /TEI/text or /TEI prefixes"},
+   Line=>{descr=>"line number of the source token relative to the current page"},
+  };
+
+  ##-----------------------------------------------------------
+  ## details: bibl attributes (bibl)
+  $details_default->{bibl} =
+  {
+   ##--built-in fields (port=>5)
+   orig=>{descr=>'bibliographic decsriptor for original source document (not properly searchable)',port=>5},
+   scan=>{descr=>'bibliographic descriptor for scanned source document (not properly searchable)', port=>5},
+   date=>{descr=>'source document date, reported as YYYY[-MM[-DD]]', port=>5},
+   page=>{descr=>'page counter integer offset',port=>5},
+   file=>{descr=>'source filename as indexed (not properly searchable)', port=>5},
+
+   ##-- D* obligatory fields (port=>4):
+   access=>{descr=>'access-control class identifier [PAWI]', port=>4},
+   author=>{descr=>'document author(s)', port=>4},
+   avail=>{descr=>'legacy availability code matching regex [MO]R[0-9][WS] (deprecated)', port=>4},
+   basename=>{descr=>'basename of indexed source file (document identifier)', port=>4},
+   bibl=>{descr=>'human-readable (short) bibliographic reference string for display', port=>4},
+   collection=>{descr=>'symbolic label for the (sub)corpus collection', port=>4},
+   flags=>{descr=>'colon- or space-separated list of Boolean flags', port=>4},
+   textClass=>{descr=>'colon-separated list of symbolic document genre(s), primary genre first', port=>4},
+   timestamp=>{descr=>'source document timestamp in UTC ISO-8601 format {YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}Z', port=>4},
+   title=>{descr=>'document title', port=>4},
+
+   ##-- D* recommended fields (port=>3)
+   availability=>{descr=>'human-readable licensing conditions', port=>3},
+   biblLex=>{descr=>'detailed bibliographic reference string for lexicographic use', port=>3},
+   biblSig=>{descr=>'short form bibliographic reference string for display (mnemonic &quot;Signature&quot; or &quot;Sigle&quot;)', port=>3},
+   keywords=>{descr=>'document keywords as a space- or colon-separated list', port=>3},
+   url=>{descr=>'source URL for this document, if available', port=>3},
+   uuid=>{descr=>'global unique identifier string for the document', port=>3},
+
+   ##-- D* extra fields (port=>2)
+   empty=>{descr=>'empty string constant',port=>2},
+   ext_id=>{descr=>'external identifier', port=>2},
+   ext_url=>{descr=>'external URL', port=>2},
+   firstDate=>{descr=>'date of initial publication', port=>2},
+   library=>{descr=>'source library', port=>2},
+   pageRange=>{descr=>'page range for whole document', port=>2},
+   pubPlace=>{descr=>'place of publication', port=>2},
+   #pubRegion=>{descr=>'', port=>2},
+   series=>{descr=>'series title', port=>2},
+   shelfmark=>{descr=>'source library shelf-mark', port=>2},
+   #site=>{descr=>'', port=>2},
+   subcollection=>{descr=>'symbolic label for subcollection', port=>2},
+   #subtitle=>{descr=>'', port=>2},
+   #supertitle=>{descr=>'', port=>2},
+   textClassDTA=>{descr=>'text class according to <a href="http://www.deutschestextarchiv.de/doku/klassifikation">DTA classification scheme</a>', port=>2},
+   #textClassLong=>{descr=>'', port=>2},
+   #textType=>{descr=>'', port=>2},
+   volume=>{descr=>'source volume, for periodicals', port=>2},
+   lang=>{descr=>'corpus content language', port=>2},
+   country=>{descr=>'2-letter <a href="https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2">ISO 3166-1 alpha-2</a> country code of origin', port=>2},
+   region=>{descr=>'region of origin',port=>2},
+   subregion=>{descr=>'region (subregion) of origin',port=>2},
+
+   ##-- deprecated fields (port=>1)
+   classcode=>{descr=>'deprecated, prefer <a href="#bibl-flags">flags</a>', port=>1},
+   classCode=>{descr=>'deprecated, prefer <a href="#bibl-flags">flags</a>', port=>1},
+   copyright=>{descr=>'deprecated, prefer <a href="#bibl-availability">availability</a>', port=>1},
+   corpus=>{descr=>'deprecated, prefer <a href="#bibl-flags">flags</a>', port=>1},
+   datefirst=>{descr=>'deprecated, prefer <a href="#bibl-firstDate">firstDate</a>', port=>1},
+   dtadir=>{descr=>'deprecated alias for <a href="#bibl-basename">basename</a>', port=>1},
+   dtaid=>{descr=>'DTA only', port=>1},
+   ext_ico=>{descr=>'deprecated', port=>1},
+   extidno=>{descr=>'deprecated, prefer ext_<a href="#bibl-ext_id">id</a> or <a href="#bibl-uuid">uuid</a>', port=>1},
+   extent=>{descr=>'deprecated, prefer count() queries', port=>1},
+   id=>{descr=>'deprecated, prefer <a href="#bibl-uuid">uuid</a>', port=>1},
+   imgstuff=>{descr=>'deprecated', port=>1},
+   pageRange=>{descr=>'deprecated alias for <a href="#bibl-page_range">page_range</a>',port=>1},
+   PageRank=>{descr=>'deprecated', port=>1},
+   random=>{descr=>'obsolete, deprecated', port=>1},
+   randstr=>{descr=>'obsolete, deprecated', port=>1},
+   series_title=>{descr=>'series title', port=>1},
+   snippet=>{descr=>'deprecated, prefer <a href="#bibl-collection">collection</a>', port=>1},
+   topic=>{descr=>'deprecated, <a href="#bibl-keywords">prefer</a> keywords', port=>1},
+   xorig=>{descr=>'deprecated, prefer <a href="#bibl-bibl">bibl</a> or <a href="#bibl-biblLex">biblLex</a>', port=>1},
+   xscan=>{descr=>'deprecated, prefer <a href="#bibl-bibl">bibl</a> or <a href="#bibl-biblLex">biblLex</a>', port=>1},
+   textClassDWDS=>{descr=>'deprecated alias for <a href="#bibl-textClass">textClass</a>', port=>1},
+  };
+
+  ##-----------------------------------------------------------
+  ## details: portability level translations
+  $details_default->{bport} =
+  {
+   ##-- portability level translations
+   '5'=>{short=>'DDC',long=>'built-in DDC metadata field'},
+   '4'=>{short=>'D*',long=>'&quot;obligatory&quot; D* metadata field'},
+   '3'=>{short=>'recommended',long=>'&quot;recommended&quot; D* metadata field'},
+   '2'=>{short=>'extra',long=>'&quot;optional&quot; D* metadata field'},
+   '1'=>{short=>'deprecated',long=>'deprecated D* metadata field'},
+   '0'=>{short=>'unknown',long=>'non-D* metadata field, probably a corpus-local extension'},
+  };
+
+  ##-----------------------------------------------------------
+  ## details: opdefaults
+  $details_default->{opkeys} = [qw(_ @_ /_/ %_ [_] :{_} ^_ <_ * .)];
+  $details_default->{ops} =
+  {
+   '_'=>{id=>'bare',descr=>'default attribute for bareword search terms '.qprref('qw_bareword','qw_set_infl')},
+   '@_'=>{id=>'at',descr=>'default attribute for exact match search terms '.qprref('qw_exact','qw_set_exact')},
+   '/_/'=>{id=>'re',descr=>'default attribute for regular expression search terms '.qprref(qw(qw_regex qw_prefix qw_suffix qw_infix qw_prefix_set qw_suffix_set qw_infix_set))},
+   '%_'=>{id=>'lem',descr=>'default attribute for lemma search terms '.qprref('qw_lemma')},
+   '[_]'=>{id=>'morph',descr=>'default attribute for morphological pattern search terms '.qprref('qw_morph')},
+   ':{_}'=>{id=>'thes',descr=>'default attribute for thesaurus pattern search terms '.qprref('qw_thesaurus')},
+   '^_'=>{id=>'chunk',descr=>'default attribute for chunk search terms '.qprref('qw_chunk')},
+   '<_'=>{id=>'file',descr=>'default attribute for server-side list-file search terms '.qprref('qw_file')},
+   '*'=>{id=>'any',descr=>'default attribute for universal wildcard search terms '.qprref('qw_any')},
+   '.'=>{id=>'anchor',descr=>'default break collection for anchor queries '.qprref('qw_anchor')},
+  };
+
+  ##-----------------------------------------------------------
+  ## details: expanders
+  my $germanet = qq{<a href="http://www.sfs.uni-tuebingen.de/GermaNet/">GermaNet</a>};
+  my $openthes = qq{<a href="//www.openthesaurus.de/">OpenThesaurus</a>};
+  my $semcloud = qq{<a href="http://kaskade.dwds.de/dstar/dta/semcloud/terms.perl">DTA::SemCloud</a>};
+  $details_default->{expand} =
+  {
+   (map {("$_"=>{descr=>qq{default expansion chain for the <a href="#attr-$_">\$$_</a> token attribute}})}
+    keys %{$details_default->{attrs}}),
+
+   ##-- index-wise defaults
+   Token=>{descr=>'default expansion chain for the <a href="#attr-Token">$Token</a> attribute, typically an alias for <a href="#expand-eqlemma">eqlemma</a>'},
+   CanonicalToken=>{descr=>'default expansion chain for the <a href="#attr-CanonicalToken">$CanonicalToken</a> attribute, typically an alias for <a href="#expand-eqlemma">eqlemma</a>'},
+   Utf8=>{descr=>'default expansion chain for the <a href="#attr-Utf8">$Utf8</a> attribute, typically an alias for <a href="#expand-eqlemma">eqlemma</a>'},
+   Lemma=>{descr=>'default expansion chain for the <a href="#attr-Lemma">$Lemma</a> attribute, typically an alias for <a href="#expand-lemma">lemma</a>'},
+   Lemmas=>{descr=>'typically an alias for <a href="#expand-lemmata">lemmata</a>'},
+   Lemmata=>{descr=>'typically an alias for <a href="#expand-lemmata">lemmata</a>'},
+   Pos=>{descr=>'default expansion chain for the <a href="#attr-Pos">$Pos</a> attribute, typically an alias for <a href="#expand-case">case</a>'},
+
+   ##-- basic
+   id=>{descr=>'identity expander (no-op)'},
+   null=>{descr=>'identity expander (no-op)'},
+   case=>{descr=>'upper-/lower-case variant expander (modulo &quot;McKinsey&quot; et al.)'},
+   tolower=>{descr=>'maps input term(s) to all lower-case'},
+   'lc'=>{descr=>'typically an alias for <a href="#expand-tolower">tolower</a>'},
+   toupper=>{descr=>'maps input term(s) to all upper-case'},
+   'uc'=>{descr=>'typically an alias for <a href="#expand-toupper">toupper</a>'},
+
+   ##-- cab-expanders
+   lemma=>{descr=>'default lemmatizer using external CAB server (precision-oriented, &quot;best&quot; lemma only, typically the default)'},
+   eqlemma=>{descr=>'finds all lemma-equivalent surface forms using an external CAB server with auxilliary vocabulary database'},
+   eql=>{descr=>'typically an alias for <a href="#expand-eqlemma">eqlemma</a>'},
+   lemmatize=>{descr=>'typically an alias for <a href="#expand-lemma">lemma</a>'},
+   lemmata=>{descr=>'alternative lemmatizer using external CAB server (recall-oriented, returns all known lemata)'},
+   lemmas=>{descr=>'typically an alias for <a href="#expand-lemmata">lemmata</a>'},
+
+   ##-- germanet expanders
+   germanet=>{descr=>'alias for <a href="#expand-gn-asi">gn-asi</a>'},
+   'gn-syn'=>{descr=>"maps lemmata to immediate $germanet synonyms (synset co-membership)"},
+   'gn-syn1'=>{descr=>"maps lemmata to depth≤1 $germanet synonyms (synset co-membership or immediate hyponyms/hyperonyms)"},
+   'gn-syn2'=>{descr=>"maps lemmata to depth≤2 $germanet synonyms (synset co-membership, first-, or second-order hyponyms/hyperonyms)"},
+   'gn-isa'=>{descr=>"maps lemmata to all $germanet hyperonyms of any depth (synonyms or superclasses)"},
+   'gn-isa1'=>{descr=>"maps lemmata to all depth≤1 $germanet hyperonyms (synonyms or immediate superclasses)"},
+   'gn-isa2'=>{descr=>"maps lemmata to all depth≤2 $germanet hyperonyms (synonyms, first-, or second-order superclasses)"},
+   'gn-asi'=>{descr=>"maps lemmata to all $germanet hyponyms of any depth (synonyms or subclasses)"},
+   'gn-asi1'=>{descr=>"maps lemmata to all depth≤1 $germanet hyponyms (synonyms or immediate subclasses)"},
+   'gn-asi2'=>{descr=>"maps lemmata to all depth≤2 $germanet hyponyms (synonyms, first-, or second-order subclasses)"},
+   'gn-sub'=>{descr=>'alias for <a href="#expand-gn-asi">gn-asi</a>'},
+   'gn-sub1'=>{descr=>'alias for <a href="#expand-gn-asi1">gn-asi1</a>'},
+   'gn-sub2'=>{descr=>'alias for <a href="#expand-gn-asi2">gn-asi2</a>'},
+   'gn-sup'=>{descr=>'alias for <a href="#expand-gn-isa">gn-isa</a>'},
+   'gn-sup1'=>{descr=>'alias for <a href="#expand-gn-isa1">gn-isa1</a>'},
+   'gn-sup2'=>{descr=>'alias for <a href="#expand-gn-isa2">gn-isa2</a>'},
+
+   ##-- openthesaurus expanders
+   openthesaurus=>{descr=>'alias for <a href="#expand-ot-asi">ot-asi</a>'},
+   openthes=>{descr=>'alias for <a href="#expand-ot-asi">ot-asi</a>'},
+   'ot-syn'=>{descr=>"maps lemmata to immediate $openthes synonyms (synset co-membership)"},
+   'ot-syn1'=>{descr=>"maps lemmata to depth≤1 $openthes synonyms (synset co-membership or first-order hyponyms/hyperonyms)"},
+   'ot-syn2'=>{descr=>"maps lemmata to depth≤2 $openthes synonyms (synset co-membership, first-, or second-order hyponyms/hyperonyms)"},
+   'ot-isa'=>{descr=>"maps lemmata to all $openthes hyperonyms of any depth (synonyms or superclasses)"},
+   'ot-isa1'=>{descr=>"maps lemmata to all depth≤1 $openthes hyperonyms (synonyms or immediate superclasses)"},
+   'ot-isa2'=>{descr=>"maps lemmata to all depth≤2 $openthes hyperonyms (synonyms, first-, or second-order superclasses)"},
+   'ot-asi'=>{descr=>"maps lemmata to all $openthes hyponyms of any depth (synonyms or subclasses)"},
+   'ot-asi1'=>{descr=>"maps lemmata to all depth≤1 $openthes hyponyms (synonyms or immediate subclasses)"},
+   'ot-asi2'=>{descr=>"maps lemmata to all depth≤2 $openthes hyponyms (synonyms, first-, or second-order subclasses)"},
+   'ot-sub'=>{descr=>'alias for <a href="#expand-ot-asi">ot-asi</a>'},
+   'ot-sub1'=>{descr=>'alias for <a href="#expand-ot-asi1">ot-asi1</a>'},
+   'ot-sub2'=>{descr=>'alias for <a href="#expand-ot-asi2">ot-asi2</a>'},
+   'ot-sup'=>{descr=>'alias for <a href="#expand-ot-isa">ot-isa</a>'},
+   'ot-sup1'=>{descr=>'alias for <a href="#expand-ot-isa1">ot-isa1</a>'},
+   'ot-sup2'=>{descr=>'alias for <a href="#expand-ot-isa2">ot-isa2</a>'},
+
+   ##-- semcloud expanders
+   sem=>{descr=>'alias for <a href="#expand-semsim">semsim</a>'},
+   semsim=>{descr=>"$semcloud distributional semantic index k-nearest neighbor lemmata, query as (LEMMA\@K|semsim)"},
+   sem10=>{descr=>'alias for LEMMA@10|<a href="#expand-semsim">semsim</a>'},
+   sem100=>{descr=>'alias for LEMMA@100|<a href="#expand-semsim">semsim</a>'},
+   sem50=>{descr=>'alias for LEMMA@50|<a href="#expand-semsim">semsim</a>'},
+
+   ##-- morphological expanders
+   morphy=>{descr=>'built-in DDC morphy lemmatization &amp; re-inflection (not recommended, prefer <a href="#expand-Lemma">Lemma</a> or <a href="#expand-eqlemma">eqlemma</a>)'},
+   tagh=>{descr=>'TAGH-based lemmatization and re-inflection via external server (not recommended, prefer <a href="#expand-eqlemma">eqlemma</a>)'},
+   infl=>{descr=>'alias for <a href="#expand-morphy">morphy</a>'},
+
+   ##-- dta expanders
+   pho=>{descr=>'phonetic equivalent surface forms using an external CAB server with auxilliary vocabulary database'},
+   rw=>{descr=>'rewrite-equivalent surface forms using an external CAB server with auxilliary vocabulary database'},
+   cab=>{descr=>'union of <a href="#expand-eqlemma">eqlemma</a>, <a href="#expand-pho">pho</a>, and <a href="#expand-pho">rw</a> expanders'},
+
+   ##-- synchronic lemmatization
+   WebLemma=>{descr=>'synchronic lemmatizer, typically an alias for <a href="#expand-lemma">lemma</a>'},
+   web=>{descr=>'typically an alias for <a href="#expand-WebLemma">WebLemma</a>'},
+   www=>{descr=>'typically an alias for <a href="#expand-WebLemma">WebLemma</a>'},
+
+   ##-- PoS-expanders
+   'pos-ud2stts'=>{descr=>qq{maps $udpos PoS-tags to $stts}},
+   'pos-ud'     =>{descr=>qq{maps $udpos Pos-tags to the native corpus tagset: typically an alias for <a href="#pos-ud2stts">pos-ud2stts</a>, used by CLARIN-FCS}},
+   'pos-fcs'    =>{descr=>qq{deprecated alias for <a href="#pos-ud">pos-ud</a>}},
+  };
+
+  ##-----------------------------------------------------------
+  ## details: enable corpus-specific overrides in CORPUS.ttk with e.g. SET details.bibl.foo = {descr=>"foo descr"}
+  my $details = $stash->{uclobber}->($details_default, $stash->{details});
+  $stash->set('details' => $details);
+
+  ##-- details: aliases
+  $stash->set("x$_" => $details->{$_}) foreach (qw(status site info attrs bibl breaks ops expand));
+
+[% END %]
+
+[%#=====================================================================
+  # formatting: link bar
+  # %]
+[% BLOCK linkbar %]
+  [% IF parent_url %]<a class="navLink" href="[% parent_url | url %]" title="[% parent_title | html %]">[% ( parent_label || "Parent" ) | html %]</a>[% END %]
+  [% IF home_label %]<a class="navLink" href="[% home_url | url %]" title="[% home_title | html %]">[% ( home_label || "Home" ) | html  %]</a>[% END %]
+[% END %]
+
+[% BLOCK ulist %]
+<ul class="$cls">
+  [%- FOREACH x IN items %]
+  <li>$x</li>
+  [%- END %]
+</ul>
+[% END %]
+  
+[% END ##--/FILTER null %]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>[% utitle %]</title>
+  [% PROCESS "html-head.ttk" %]
+  <style type="text/css">
+.nowrap { white-space: nowrap; }
+
+.subsection h3:first-child {
+  margin-left: -1em;
+}
+
+table.details {
+  border: 1px solid grey; /*none*/
+  border-collapse: collapse;
+  margin-left: 2em;
+  margin-bottom: 5px;
+}
+table.details > tbody > tr > td, table.details th {
+  text-align: left;
+  /*border-left: 1px solid grey;
+  border-right: 1px solid grey;*/
+  padding-left: 5px;
+  padding-right: 5px;
+}
+table.details th
+{
+  text-align: left;
+  color: #000099;/*-- dark blue --*/
+}
+table.details tr:first-child > th {
+  background-color: #000099;/*-- dark blue --*/
+  font-weight: bold;
+  font-variant: small-caps;
+  color: #ffffff;
+}
+table.details td.descr, table.details th.descr {
+  border-left: 1px solid grey;
+}
+table.details td.descr {
+  font-style: italic;
+}
+  
+table.details > tbody > tr {
+  border: none;
+}
+table.details .nodoc {
+  color: #ff0000;
+  /*font-weight: bold;*/
+}
+table.details > tbody > tr:nth-child(odd) { background-color: #ffffff; }
+table.details > tbody > tr:nth-child(even) { background-color: #e8e8e8; /*#cee8ff*/ }
+
+.bvis.yes, .bvis.always { color: #008000; }
+.bvis.no, .bvis.never  { color: #ff0000; }
+.bvis.maybe, .bvis.sometimes { color: #ffa500; }
+
+.port.stars {
+    /*font-size: 128px;*/
+    color: gold;
+    /*text-outline: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;*/
+    -webkit-text-stroke: .5px black;
+}
+  </style>
+</head>
+<body>
+    <div class="outer">
+    [% PROCESS banner %]
+    <div class="headers">
+        [% PROCESS headerLogo %]
+	<h1>[% utitle %]</h1>
+	<div class="linkbar" style="margin-left:10px;">[% PROCESS linkbar %]</div>
+      </div>
+      <!--/div.headers -->
+
+      <!-- div.content -->
+      <div class="content">
+
+	<!--=================================================-->
+	<div id="toc" class="section headers">
+	  <h2>Contents</h2>
+          [% toc2html([
+		       {"label"=>"Server Status","href"=>"#status",
+			sub=>[
+			     ]},
+		       {"label"=>"Index Information","href"=>"#info",
+			sub=>[
+			      {"label"=>"Collection","href"=>"#collection"},
+			      {"label"=>"Basic Information","href"=>"#basic"},
+			      {"label"=>"Version Information","href"=>"#version"},
+			      {"label"=>"Token Attributes","href"=>"#attrs"},
+			      {"label"=>"Bibliographic Metadata Attributes","href"=>"#bibl"},
+			      {"label"=>"Break Collections","href"=>"#breaks"},
+			      {"label"=>"Operator Defaults","href"=>"#ops"},
+			      {"label"=>"Term Expanders","href"=>"#expand"},
+			     ]},
+		       {"label"=>"Site Configuration","href"=>"#site",
+			sub=>[
+			     ]},
+		      ])
+	  +%]
+	  <p/>
+	</div>
+	<!-- /div.section#toc -->
+
+	<!--=================================================-->
+	<div class="section" id="status">
+	  <h2>Server Status <a href="status">(raw)</a></h2>
+	  The following status information describes the underyling DDC server process.
+	  
+	  <table class="details"><tbody>
+	    <tr><th>key</th><th class="nowrap">: value</th><th class="descr">description</th></tr>
+	    [% FOREACH a IN ["name","version","compat","started","uptime","nrequests","nqueries","nerrors","nslow","qtavg","nworkers","memkb","navcachesize","corpora","mmap","hitstrings"] %]
+	    [%-
+   	       SET descr  = xstatus.item(a).descr || '--undocumented--' ;
+	       SET dclass = xstatus.item(a).descr ? '' :  'nodoc';
+	       SET rawval = { $a => status.item(a) };
+	    -%]
+	    <tr id="status-$a" title="[% rawval.json() | html %]">
+	      <th>[% (xstatus.item(a).key || a) | html %]</th>
+	      <td class="nowrap">: [% valfmt(a,status.item(a),xstatus) %]</td>
+	      <td class="descr [% dclass %]">[% descr | html %]</td>
+	    </tr>
+	    [% END %]
+	  </tbody></table>
+	</div>
+	<!--/div.section#status-->
+
+	<!--=================================================-->
+	<div class="section" id="info">
+	  <h2>Index Information <a href="info">(raw)</a></h2>
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="collection">
+	    <h3>Collection</h3>
+	    The physical subcorpora supplied the following collection information conforming to D* build system conventions.
+
+	    <table class="details"><tbody>
+	      <tr><th>collection</th><th class="descr">description</th></tr>
+	      [% FOREACH coll IN info.common.collections %]
+	      [%-
+	          SET cname  = coll.0;
+      	          SET cdescr = coll.1 || '--undocumented--' ;
+		  SET ctitle = "collection " _ cname;
+	      -%]
+	      <tr id="collection-$cname" title="[% ctitle %]">
+		<th>$cname</th>
+		<td class="descr" style="white-space: normal;">[% cdescr |html %]</td>
+	      </tr>
+	      [% END %]
+	    </tbody></table>
+	  </div>
+	  <!--/div.subsection#collection-->
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="basic">
+	    <h3>Basic Information</h3>
+	    The following basic information was estimated by aggregation over
+	    all physical leaf nodes of the current corpus.
+
+	    <table class="details"><tbody>
+	      <tr><th>key</th><th>: value</th><th class="descr">description</th></tr>
+	      [% FOREACH a IN ["indexed","nfiles","nsources","nmasked","ntokens"] %]
+	      [%-
+      	          SET descr  = xinfo.item(a).descr || '--undocumented--' ;
+	          SET dclass = xinfo.item(a).descr ? '' :  'nodoc';
+   	          SET rawval = { $a => info.common.item(a) };
+	      -%]
+	      <tr id="info-$a" title="[% rawval.json() | html %]">
+		<th>[% (xinfo.item(a).key || a) | html %]</th>
+		<td>: [% valfmt(a,info.common.item(a),xinfo) | html %]</td>
+		<td class="descr $dclass">[% descr %]</td>
+	      </tr>
+	      [% END %]
+	    </tbody></table>
+	  </div>
+	  <!--/div.subsection#attrs-->
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="version">
+	    <h3>Version Information</h3>
+	    The physical subcorpora supplied the following version information conforming to D* build system conventions.
+	    
+	    <table class="details"><tbody>
+	      <tr><th>key</th><th>: value(s)</th><th class="descr">description</th></tr>
+	      [% FOREACH vkey IN info.common.user.keys.sort %]
+	      [%-
+	          SET vobj   = info.common.user.item(vkey);
+      	          SET descr  = details.user.item(vkey).descr || '--undocumented--' ;
+	          SET dclass = details.user.item(vkey).descr ? '' : 'nodoc';
+		  SET title = "version (" _ vkey _ ")";
+	      -%]
+	      <tr id="ver-$vkey" title="[% title %]">
+		<th>$vkey</th>
+		<td style="white-space: pre-line;">[% FOREACH vvkey IN vobj.keys.sort -%]
+		  [%- SET vvobj = vobj.item(vvkey) -%]
+		  [%- "\n" IF vvkey != vobj.keys.sort.0 -%]
+		  <span class="mono" title="[% (vkey _ ': ' _ vvobj.vals.join(' ; ')) | html %]">: [% vvkey | html %]</span>
+		[%- END -%]</td>
+		<td class="descr $dclass">[% descr %]</td>
+	      </tr>
+	      [% END %]
+	    </tbody></table>
+	  </div>
+	  <!--/div.subsection#version-->
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="attrs">
+	    <h3>Token Attributes</h3>
+	    The following token attribute indices (<a href="[% uqdoc %]#rule_s_index">s_index</a>)
+	    are available for use in
+	    <a href="[% uqdoc %]#rule_qc_word">single-token queries</a>,
+	    <a href="[% uqdoc %]#rule_qf_context_sort">contextual sort operators</a>
+	    and <a href="[% uqdoc %]#rule_count_key">count-key expressions</a>.
+
+	    <table class="details fields"><tbody>
+	      <tr><th>name</th><th class="jl">alias(es)</th><th>visible</th><th class="jr">size</th><th class="descr">description</th></tr>
+	      [% FOREACH a IN info.common.indices %]
+	      [%-
+      	          SET descr  = xattrs.item(a.name).descr || '--undocumented--' ;
+	          SET dclass = xattrs.item(a.name).descr ? '' :  'nodoc';
+		  SET title = "token attribute (" _ a.phys.join(" | ") _ ")";
+	      -%]
+	      <tr id="attr-[% a.name.replace('\W','_') %]" title="[% title|html %]">
+		<th>\$[% info.common.name2expand.item(a.name) ? ('<a href="#expand-' _ a.name _ '">' _ a.name _ '</a>') : a.name %]</th>
+		<th title="[% title|html %]: known aliases">\$[% a.aliases.join('<br/>$') %]</th>
+		<td class="jc bvis $a.visible" title="[% title |html %]: visibility status: [% a.nvis %] / [% info.common.nphys %] physical subcorpora">[% a.visible %]</td>
+		<td class="jr nowrap" title="[% title |html %]: total number of indexed (subcorpus,value) pairs = $a.size">[% si_str(a.size) %]</td>
+		<td class="descr $dclass">[%- descr -%]</td>
+	      </tr>
+	      [% END %]
+	    </tbody></table>
+	  </div>
+	  <!--/div.subsection#attrs-->
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="bibl">
+	    <h3>Bibliographic Metadata Attributes</h3>
+	    The following bibliographic metadata attributes and aliases (<a href="[% uqdoc %]#rule_s_field">s_field</a>)
+	    are available for use in
+	    <a href="$uqdoc#rule_qf_has_field">metadata filters</a>,
+	    <a href="$uqdoc#rule_qf_bibl_sort">metadata sort operators</a>,
+	    and <a href="$uqdoc#rule_count_key">count-key expressions</a>.
+
+	    <table class="details fields"><tbody>
+	      <tr><th>name</th><th>visible</th><th class="jc">portability</th><th class="jr">size</th><th class="descr">description</th></tr>
+	      [% FOREACH a IN info.common.bibl %]
+	      [%-
+	          SET ax     = xbibl.item(a.name);
+      	          SET descr  = (a.const ? "<b>constant</b>: " : "") _ (ax.descr || '--undocumented--');
+	          SET dclass = ax.descr ? '' :  'nodoc';
+		  SET title  = (a.const ? "constant " : "") _ "bibl attribute (" _ a.phys.join(" | ") _ ")";
+	          SET axport = details.bport.item(ax.port || "0");
+                  SET pstar = "★"; #☆✰
+	      -%]
+	      <tr id="bibl-[% a.name.replace('\W','_') %]" title="[% title|html %]">
+		<th>$a.name</th>
+		<td class="jc bvis $a.visible" title="[% title |html %]: visibility status: [% a.nvis %] / [% info.common.nphys %] physical subcorpora">[% a.visible %]</td>
+		<td class="jl nowrap port stars" title="[% title |html %]: portability level ([% ax.port || '0' %]): [% axport.long || axport.short || '?' %]">[% pstar.repeat(ax.port) %]</td>
+		<td class="jr nowrap" title="[% title |html %]: total number of indexed (subcorpus,value) pairs = $a.size">[% si_str(a.size) %]</td>
+		<td class="descr $dclass">[% descr %]</td>
+	      </tr>
+	      [% END %]
+	    </tbody></table>
+	  </div>
+	  <!--/div.subsection#bibl-->
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="breaks">
+	    <h3>Break Collections</h3>
+	    The following break collections (<a href="[% uqdoc %]#rule_s_break">s_break</a>)
+	    are available for use in
+	    <a href="[% uqdoc %]#rule_qw_anchor">anchor queries</a>
+	    and the <a href="[% uqdoc %]#rule_q_flag">#WITHIN</a> query operator.
+
+	    <table class="details fields"><tbody>
+	      <tr><th>name</th><th class="jc">alias</th><th class="jr">size</th><th class="descr">description</th></tr>
+	      [% FOREACH b IN info.common.breaks %]
+	      [%-
+      	          SET descr  = xbreaks.item(b.key).descr || '--undocumented--' ;
+	          SET dclass = xbreaks.item(b.key).descr ? '' :  'nodoc';
+		  SET title = "break collection (" _ b.key _ ")";
+	      -%]
+	      <tr id="break-[% b.key.replace('\W','_') %]" title="[% title|html %]">
+		<th><a name="break-$b.longname">$b.longname</a></th>
+		<th class="jc"><a name="break-$b.shortname">[% b.shortname != b.longname ? b.shortname : '' %]</a></th>
+		<td class="jr nowrap" title="[% title |html %]: total number of indexed breaks">[% si_str(b.size) %]</td>
+		<td class="descr $dclass">[% descr | html %]</td>
+	      </tr>
+	      [% END %]
+	    </tbody></table>
+	  </div>
+	  <!--/div.subsection#breaks-->
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="ops">
+	    <h3>Operator-Dependent Defaults</h3>
+	    Query operators lacking an explicit index specification ([% qrref("s_index") %] rsp. [% qrref("s_break") %])
+	    will select a default <a href="#attrs">token attribute</a> or <a href="#breaks">break collection</a>
+	    depending on the selected query operator as follows:
+
+	    <table class="details fields"><tbody>
+	      <tr><th class="jc">operator</th><th>attribute(s)</th><th class="descr">description</th></tr>
+	      [%- SET opi = 0 -%]
+	      [% FOREACH opkey IN details.opkeys %]
+	      [%- NEXT IF !info.common.opdefaults.item(opkey) -%]
+	      [%-
+	          SET op     = info.common.opdefaults.item(opkey);
+                  SET opid   = xops.item(opkey).id || ("unkown" _ opi);
+      	          SET descr  = xops.item(opkey).descr || '--undocumented--';
+	          SET dclass = xops.item(opkey).descr ? '' : 'nodoc';
+  		  SET title  = "operator default index: " _ escapeHTML(opkey);
+		  SET opi    = opi + 1;
+	      -%]
+	      <tr id="op-$opid" title="[% title %]">
+		<th class="jc mono">$opkey</th>
+		  <th>[%- FOREACH ov IN op.vals -%]
+		    [%- ov==op.vals.0 ? "" : "; " -%]
+		    [%- IF opkey == "." -%]
+		      <a href="#break-$ov.attr" title="[% title %]: $ov.attr ([% ov.corpora.join(', ') %])">$ov.attr</a>
+		      [%- ELSE -%]
+		      <a href="#attr-$ov.attr">\$[% ov.attr %]</a>
+		    [%- END -%]
+		  [%- END -%]</th>
+		<td class="descr $dclass">[% descr %]</td>
+	      </tr>
+	      [% END %]
+	    </tbody></table>
+	  </div>
+	  <!--/div.subsection#ops-->
+
+	  <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+	  <div class="subsection" id="expand">
+	    <h3>Term Expanders</h3>
+	      The following term expanders (<a href="$uqdoc#rule_s_expander">s_expander</a>)
+	      are available for use in
+	      <a href="$uqdoc#term_EXPANDER">term expansion pipelines</a>
+	      for
+	      <a href="$uqdoc#rule_qw_bareword">bareword</a>
+	      and
+	      <a href="$uqdoc#rule_qw_set_infl">set-valued</a>
+	      term queries.
+
+	    <table class="details fields"><tbody>
+	      <tr><th>name</th><th class="descr">description</th></tr>
+	      [% FOREACH x IN info.common.expand %]
+	      [%-
+      	          SET descr  = xexpand.item(x).descr || '--undocumented--' ;
+	          SET dclass = xexpand.item(x).descr ? '' :  'nodoc';
+		  SET title = "term expander ($x)";
+	      -%]
+	      <tr id="expand-[% x %]" title="[% title|html %]">
+		<th>$x</th>
+		<td class="descr $dclass">[% descr %]</td>
+	      </tr>
+	      [% END %]
+	    </tbody></table>
+	  </div>
+	  <!--/div.subsection#expand-->
+
+	</div>
+	<!--/div.section#info-->
+
+	<!--=================================================-->
+	<div class="section" id="site">
+	  <h2>Site Configuration <a href="config">(raw)</a></h2>
+	    The following <a href="//kaskade.dwds.de/dstar/doc/README_config.html#web.mak-variables">configuration variables</a>
+	    (among others) were used to <a href="https://kaskade.dwds.de/dstar/doc/README_web.html#site.rc">initialize</a> this web-wrapper site:
+
+	  <table class="details"><tbody>
+	    <tr><th>variable</th><th class="nowrap">= value</th></tr>
+	    [% FOREACH a IN xsite.keys.sort %]
+	    [%-
+   	       SET descr  = xsite.item(a).descr || 'se README_config' ;
+	       SET dclass = xsite.item(a).descr ? '' :  'nodoc';
+	       SET rawval = { $a => site.item(a) };
+	    -%]
+	    <tr id="site-$a" title="[% a %]: [% descr | html %]">
+	      <th><a href="//kaskade.dwds.de/dstar/doc/README_config.html#$a">[% (xsite.item(a).key || a) | html %]</a></th>
+	      <td class="mono">= [% valfmt(a,site.item(a),xsite) %]</td>
+	    </tr>
+	    [% END %]
+	  </tbody></table>
+	</div>
+	<!--/div.section#site-->
+
+      </div>
+      <!--/div.content-->
+      [% SET html_foot = root_dir _ "html-foot.ttk" %]
+      [% PROCESS $html_foot linkbar=0 linkttk="linkbar" %]
+      <script type="text/javascript">ttk_elapsed = 0 [%# cdb.t_elapsed.json %];</script>
+    </div>
+    <!--/div.outer-->
+  </body>
+</html>
+[%#--
+ ;; Local Variables:
+ ;; mode: CPerl
+ ;; coding: utf-8
+ ;; End:
+%]

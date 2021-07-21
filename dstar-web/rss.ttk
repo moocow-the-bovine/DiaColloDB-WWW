@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk"
+%]
+[%#------------------------------------------------------------
+  # header
+  #    xmlns:dc="http://purl.org/dc/elements/1.1/"
+  #    xmlns:dcterms="http://purl.org/dc/terms/"
+%]
+ <rss version="2.0" 
+      xmlns:os="http://a9.com/-/spec/opensearch/1.1/"
+      xmlns:atom="http://www.w3.org/2005/Atom"
+      xmlns:content="http://purl.org/rss/1.0/modules/content/"
+      xmlns:media="http://search.yahoo.com/mrss/"
+      xmlns:dstar="[% root_ns %]"
+      >
+   <channel>
+     <atom:id>[% fquri(query_uri) | xml %]</atom:id>
+     <title>[% root_title %]</title> 
+     <link>[% fquri(root_url) | xml %]</link>
+     <description>[% (root_descr _ ': "' _ query _ '"') | xml %]</description> 
+     <pubDate>[% date.format(hits_timestamp(hits), format=>"%a, %d %b %Y %H:%M:%S +0000", gmt=>1) %]</pubDate>
+     <image>
+	<url>[% fquri(root_logo) | url | xml %]</url>
+ 	<title>[% root_title %]</title>
+	<link>[% fquri(root_url) | xml %]</link>
+     </image>
+     <atom:generator version="[% VERSION %]">[% gen_label |xml %]</atom:generator>
+     <os:totalResults>[% totalResults %]</os:totalResults>
+     <os:startIndex>[% startIndex %]</os:startIndex>
+     <os:itemsPerPage>[% itemsPerPage %]</os:itemsPerPage>
+     <os:Query role="request" searchTerms="[% query |xml %]" startIndex="[% startIndex %]" count="[% itemsPerPage %]"/>
+[%#------------------------------------------------------------
+  # links
+%]
+     <atom:link rel="os:search" type="application/opensearchdescription+xml" href="[% osd_url | url | xml %]"/>
+     <atom:link rel="self"
+	   	type="application/rss+xml"
+		href="[% fquri(query_uri, {'start'=>startIndex, 'limit'=>itemsPerPage, 'hint'=>hint_self, 'fmt'=>'rss'}) |xml %]"/>
+     <atom:link rel="alternate"
+	   	type="text/html"
+	   	href="[% fquri(query_uri, {'start'=>startIndex, 'limit'=>itemsPerPage, 'hint'=>hint_self, 'fmt'=>'html'}) |xml %]"/>
+     <atom:link rel="alternate"
+	   	type="application/atom+xml"
+	   	href="[% fquri(query_uri, {'start'=>startIndex, 'limit'=>itemsPerPage, 'hint'=>hint_self, 'fmt'=>'atom'}) |xml %]"/>
+     <atom:link rel="first"
+	   	type="application/rss+xml"
+	   	href="[% fquri(query_uri, {'start'=>startIndex, 'limit'=>itemsPerPage, 'fmt'=>'rss'}) |xml %]"/>
+[% IF (startIndex - itemsPerPage) >= 0 %]
+     <atom:link rel="previous"
+	   	type="application/rss+xml"
+	   	href="[% fquri(query_uri, {'start'=>(startIndex-itemsPerPage), 'limit'=>itemsPerPage, 'hint'=>hint_prev, 'fmt'=>'rss'}) |xml %]"/>
+[% END %]
+[% IF (startIndex + itemsPerPage) < totalResults %]
+     <atom:link rel="next"
+	   	type="application/rss+xml"
+	   	href="[% fquri(query_uri, {'start'=>(startIndex+itemsPerPage), 'limit'=>itemsPerPage, 'hint'=>hint_next, 'fmt'=>'rss'}) |xml %]"/>
+[% END %]
+     <atom:link rel="last"
+	   	type="application/rss+xml"
+	   	href="[% fquri(query_uri, {'start'=>(totalResults-itemsPerPage), 'limit'=>itemsPerPage, 'fmt'=>'rss'}) |xml %]"/>
+[%#------------------------------------------------------------
+  # hits
+%]
+[% hit_i = 0 %]
+[% FOREACH hit = hits.hits_ %]
+[% PROCESS "hit.ttk" %]
+[% DEFAULT hit.url = "file://" _ hit.label.replace(":","/") %]
+<item>
+ <guid>[% (hit.url _ "?i=" _ hit_i) | xml %]</guid>
+ <title>[% hit.meta_.title | xml %]</title>
+ <link>[% hit.url | xml %]</link>
+ <atom:updated>[% date.format(hit_timestamp(hit), format=>"%Y-%m-%dT%H:%M:%SZ", gmt=>1) %]</atom:updated>
+ [% IF hit.meta_.url %]
+ <media:content url="[% hit.meta_.url | html %]" medium="document" type="text/html"/>
+ [% END %]
+[%#--------
+  # metadata: dta:*
+%]
+[%#--------
+  # metadata: dstar:*
+%]
+ <!--<author><name>[% hit.meta_.author |xml %]</name></author>-->
+ [% FOREACH key IN hit.meta_.keys.sort %]
+   [% NEXT IF key.match('^(?:indices)_$') %]
+   [% NEXT IF key.match('^(?:orig|scan|page)_$') && !hit.meta_.$key %]
+   <dstar:[% key %]>[% hit.meta_.$key |xml %]</dstar:[% key %]>
+ [% END ##--/foreach key in hit.meta_.keys.sort %]
+ <description>
+   [% contextString(hit, '', '', { escape=>'xml' }) %]
+ </description>
+ <content:encoded>
+   <![CDATA[[% contextString(hit, '<b>', '</b>', { escape=>'xml'}).replace('\]','&#93;') %]]]>
+ </content:encoded>
+</item>
+[% hit_i = hit_i + 1 %]
+[% END %]
+   </channel>
+ </rss>
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]
+  

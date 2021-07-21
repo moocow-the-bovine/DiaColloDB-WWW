@@ -1,0 +1,87 @@
+	  <form style="display: none;"><input type="search" name="s" /></form><!-- dummy form for chrome OSD auto-discovery -->
+	  <form id="queryForm" method="get" action="dstar.perl">
+	    <input type="hidden" id="qf_q" name="q"/>
+	    <input type="hidden" id="qf_fmt" name="fmt"/>
+	    <input type="hidden" id="qf_start" name="start"/>
+	    <input type="hidden" id="qf_limit" name="limit"/>
+	    <input type="hidden" id="qf_ctx"   name="ctx"/>
+	    <input type="hidden" id="qf_debug" name="debug"/>
+   	    <input type="hidden" id="qf_export" name="export"/>
+	    [% IF flags_options %]<input type="hidden" id="qf_flags" name="flags"/>[% END %]
+	  </form>
+	  <form id="userForm" onsubmit="return userFormSubmit()">
+	    <table class="sep">
+	      <tbody>
+		<tr title="DDC query string">
+		  <td class="searchLabel">Query:</td>
+		  <td><input id="in_q" type="text"  name="q0"  size="64" class="searchText ddcQuery" /></td>
+		</tr>
+		<input id="in_qq" type="hidden" name="qq"/>
+		[% IF flags_options %]
+		<tr title="Document property flags">
+		  <td class="searchLabel">Flags:</td>
+		  <td>
+		    <select id="in_flags" name="flags" class="searchText" style="width:100%">
+		      [% FOREACH fo IN flags_options %]
+		      <option [% IF fo.selected %]selected="1"[% END %] value="[% fo.value | html %]">[% fo.label | html %]</option>
+		      [% END ##--/foreach fo in flags_options %]
+		    </select>
+		  </td>
+		</tr>
+		[% END ##--/IF flags_options %]
+		<tr title="Output format">
+		  <td class="searchLabel">Format:</td>
+		  <td>
+		    <select id="in_fmt" name="fmt" class="searchText" style="width:100%">
+		      <option value="html">HTML</option>
+		      <option selected="selected" value="kwic">KWIC (default)</option>
+		      <option value="ts">Time Series (histogram)</option>
+		      <option value="text">Text</option>
+		      <option value="text-kwic">Text/KWIC</option>
+		      <option value="csv">CSV</option>
+		      <option value="csv-kwic">CSV/KWIC</option>
+		      <option value="tsv">TSV</option>
+		      <option value="tsv-kwic">TSV/KWIC</option>
+		      <option value="json">JSON</option>
+		      <option value="yaml">YAML</option>
+		      <option value="atom">ATOM 1.0</option>
+		      <option value="rss">RSS 2.0</option>
+		      <option value="tcf">TCF 0.4</option>
+		      <option value="ddc">DDC (raw response data)</option>
+		    </select>
+		  </td>
+		</tr>
+		<tr title="First hit to display (counting from 1)">
+		  <td class="searchLabel">Start Index:</td>
+		  <td><input id="in_start" type="text" name="start" value="1" size="4" /></td>
+		</tr>
+		<tr title="Number of hits to display per page">
+		  <td class="searchLabel">Page Size:</td>
+		  <td><input id="in_limit" type="text" name="limit" value="10" size="4" /></td>
+		</tr>
+		<tr title="Size of KWIC context window (tokens)">
+		  <td class="searchLabel">KWIC Width:</td>
+		  <td><input id="in_ctx" type="text" name="ctx" value="8" size="4" /></td> 
+		</tr>
+		<tr title="Enable debugging mode?">
+		  <td class="searchLabel">Debug:</td>
+		  <td><input id="in_debug" type="checkbox" name="debug" value="1"/></td>
+		</tr>
+		<!--
+		<tr title="Download results directly?">
+		  <td class="searchLabel">Export:</td>
+		  <td><input id="in_export" type="checkbox" name="export" value="1"/></td>
+		</tr>
+		-->
+		<tr>
+		  <td/>
+		  <td>
+		    <button type="submit" value="submit">submit</button>
+		    <input  onclick="userFormReset()" type="button" value="reset"/>
+		    <input  onclick="userFormExport()" type="button" value="export"/>
+		    <input type="hidden" id="in_export" name="export"/>
+		  </td>
+		</tr>
+	      </tbody>
+	    </table>
+	  </form>

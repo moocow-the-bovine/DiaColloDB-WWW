@@ -1,0 +1,13 @@
+[% IF parent_url %]<a class="navLink" href="[% parent_url | url %]" title="[% parent_title | html %]">[% ( parent_label || "Parent" ) | html %]</a>[% END %]
+[% IF home_label %]<a class="navLink" href="[% home_url | url %]" title="[% home_title | html %]">[% ( home_label || "Home" ) | html  %]</a>[% END %]
+<a class="navLink" href="[% lizard_url(q=query) %]" title="[% root_title %] interactive term expansion">Query Lizard</a>
+|
+<a class="navLink" href="[% lizard_url("q"=>q,"x"=>x,"fmt"=>"json") %]" title="Expansion results as JSON">JSON</a>
+<a class="navLink" href="[% lizard_url("q"=>q,"x"=>x,"fmt"=>"text") %]" title="Expansion results as plain text">Text</a>
+|
+<a class="navLink" href="[% help_url %]" title="DDC query syntax">Help</a>
+[%#
+  # Local variables:
+  # mode: nxml
+  # End:
+%]

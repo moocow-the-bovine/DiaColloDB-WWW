@@ -1,0 +1,474 @@
+[%#------------------------------------------------------------
+  # File: common.ttk
+  # Description: common variables for dstar webapi
+%]
+[% FILTER null %]
+[% USE date %]
+[% USE HTML %]
+[% USE URL %]
+
+[% PERL %]
+  ##-- reversion with ./reversion.sh via Perl::Version (debian package libperl-version-perl)
+  my $VERSION = "0.60";
+  $stash->set(VERSION=>$VERSION);
+[% END %]
+
+[%#------------------------------------------------------------
+  # perl subs
+%]
+[% PERL %]
+  use URI;
+
+  ##-- @utf8_encoded = u8enc(@strs)
+  my $u8enc = sub {
+    return map {utf8::is_utf8($_) ? Encode::encode_utf8($_) : $_} @_;
+  };
+
+  ##-- $uristr = quri($base, \%form)
+  my $quri = sub {
+    my ($base,$form)=@_;
+    my $uri=URI->new($base);
+    #foreach ($base, %{$form||{}}) {
+    #  print STDERR "quri($base): \"$_\" : utf8:",(utf8::is_utf8($_) ? 1 : 0), "\n";
+    #}
+    $uri->query_form( $u8enc->($uri->query_form, %{$form||{}}) );
+    #print STDERR "quri($base) -> ", $uri->as_string, "\n";
+    return $uri->as_string;
+  };
+  $stash->set('quri'=>$quri);
+
+  ## $fquri = fquri($uri)
+  ## $fquri = fquri($uri, \%form)
+  my $fquri = sub {
+     my $uri  = URI->new($_[0]);
+     $uri->scheme($ENV{HTTPS} ? "https" : "http") if (!$uri->scheme);
+     $uri->host($ENV{HTTP_HOST} || "localhost") if ($uri->can('host') && !$uri->host);
+     $uri->query_form( $u8enc->($uri->query_form, %{$_[1]//{}}) );
+     return $uri->as_string;
+  };
+  $stash->set('fquri'=>$fquri);
+
+  ## $urisub = uuri($base, \%form)
+  ## $uristr = $urisub->(\%form)
+  $stash->set('uuri',
+  sub {
+    my $base = $quri->(@_);
+    return sub { $quri->($base,@_); };
+  });
+
+  ##-- $unix_time = hit_timestamp($hit)
+  my $hit_timestamp = sub {
+    my $hit = shift;
+    return Date::Parse::str2time($hit->{meta_}{timestamp}) if ($hit->{meta_}{timestamp});
+    return $stash->get('root_time');
+  };
+
+  ##-- $unix_time = rsp_timestamp($hitlist)
+  my $hits_timestamp = sub {
+    my $hits = shift;
+    my $ts = 0;
+    foreach (map {$hit_timestamp->($_)} (UNIVERSAL::isa($hits,'ARRAY') ? @$hits : @{$hits->{hits_}})) {
+      $ts = $_ if ($_ > $ts);
+    }
+    return $ts;
+  };
+  $stash->set('hit_timestamp'=>$hit_timestamp);
+
+  ##-- $elapsed_secs = elapsed()
+  ##-- $elapsed_secs = elapsed($t0)
+  use Time::HiRes;
+  my $elapsed_sub = sub {
+    my $t0 = shift || $stash->get('t0');
+    return Time::HiRes::tv_interval($t0,[Time::HiRes::gettimeofday]);
+  };
+  $stash->set('elapsed'=>$elapsed_sub);
+
+  ##-- $HTML = toc2html(\@TOC,$indent="\t\t")
+  ## + prints an HTML table of contents for \@TOC
+  ## + \@TOC = [$item1,$item2, ..., $itemN]
+  ## + each $item in @TOC is a HASH-ref
+  ##   { label=>$label, href=>"#$ref", sub=>\@SUBTOC }
+  sub toc2html {
+    my ($elt,$indent) = @_;
+    $indent //= "\t\t";
+    if (UNIVERSAL::isa($elt,'ARRAY')) {
+      ##-- list-toc
+      return join('',
+		  "${indent}<ul>\n",
+		  (map {toc2html($_,"$indent  ")} @$elt),
+		  "${indent}</ul>\n",
+		 );
+    }
+    elsif (UNIVERSAL::isa($elt,'HASH')) {
+      ##-- single item (HASH-ref)
+      return join('',
+		  "${indent}<li>",
+		  ($elt->{href} ? "<a href=\"$elt->{href}\">" : ''),
+		  $elt->{label},
+		  ($elt->{href} ? "</a>" : qw()),
+		  ($elt->{sub} && @{$elt->{sub}} ? ("\n",toc2html($elt->{sub},"${indent}  "),"${indent}") : qw()),
+		  "</li>\n",
+		 );
+    }
+    elsif (defined($elt)) {
+      ##-- single item (string)
+      return "${indent}<li>$elt</li>\n";
+    }
+  };
+  my $toc2html_sub = \&toc2html;
+  $stash->set('toc2html',$toc2html_sub);
+
+  ##-- $str = si_str($val, fmt=>$format, pad=>$pad, unit=>$unit)
+  my $si_str = sub {
+    my ($x,%opts) = @_;
+    my $fmt = $opts{fmt} // '%.3g';
+    my $pad = $opts{pad} // ' ';
+    my $unit = $opts{unit} // '';
+    return sprintf("${fmt}${pad}Y", $x/1e24).$unit if ($x >= 1e24);  ##-- yotta
+    return sprintf("${fmt}${pad}Z", $x/1e21).$unit if ($x >= 1e21);  ##-- zetta
+    return sprintf("${fmt}${pad}E", $x/1e18).$unit if ($x >= 1e18);  ##-- exa
+    return sprintf("${fmt}${pad}P", $x/1e15).$unit if ($x >= 1e15);  ##-- peta
+    return sprintf("${fmt}${pad}T", $x/1e12).$unit if ($x >= 1e12);  ##-- tera
+    return sprintf("${fmt}${pad}G", $x/1e9).$unit  if ($x >= 1e9);   ##-- giga
+    return sprintf("${fmt}${pad}M", $x/1e6).$unit  if ($x >= 1e6);   ##-- mega
+    return sprintf("${fmt}${pad}K", $x/1e3).$unit  if ($x >= 1e3);   ##-- kilo
+    return sprintf("${fmt}${pad}",  $x).$unit      if ($x >= 1);     ##-- (natural units)
+    return sprintf("${fmt}${pad}m", $x*1e3).$unit  if ($x >= 1e-3);  ##-- milli
+    return sprintf("${fmt}${pad}u", $x*1e6).$unit  if ($x >= 1e-6);  ##-- micro
+    return sprintf("${fmt}${pad}n", $x*1e9).$unit  if ($x >= 1e-9);  ##-- nano
+    return sprintf("${fmt}${pad}p", $x*1e12).$unit if ($x >= 1e-12); ##-- pico
+    return sprintf("${fmt}${pad}f", $x*1e15).$unit if ($x >= 1e-15); ##-- femto
+    return sprintf("${fmt}${pad}a", $x*1e18).$unit if ($x >= 1e-18); ##-- atto
+    return sprintf("${fmt}${pad}z", $x*1e21).$unit if ($x >= 1e-21); ##-- zepto
+    return sprintf("${fmt}${pad}y", $x*1e24).$unit if ($x >= 1e-24); ##-- yocto
+    return sprintf("${fmt}${pad}", $x).$unit; ##-- default
+  };
+  $stash->set('si_str',$si_str);
+
+  ##-- C = uclobber($a,$b)
+  ##  + deep unification-like merge, $b values clobber $a values
+  sub uclobber {
+    my ($a,$b) = @_;
+    if (!defined($a)) {
+      ##-- case (undef,$b) -> $b
+      return $b;
+    } elsif (!defined($b)) {
+      ##-- case ($a,undef) -> $a
+      return $a;
+    } elsif (UNIVERSAL::isa($a,'HASH') && UNIVERSAL::isa($b,'HASH')) {
+      ##-- case (\%a,\%b) -> recurse (copy)
+      my %keys = map {($_=>undef)} (keys(%$a), keys(%$b));
+      return { map {($_=>uclobber($a->{$_},$b->{$_}))} keys %keys };
+    } elsif (UNIVERSAL::isa($a,'ARRAY') && UNIVERSAL::isa($b,'ARRAY')) {
+      ##-- case (\@a,\@b) -> recurse (copy)
+      return [ map {uclobber($a->[$_],$b->[$_])} (0..($#$a > $#$b ? $#$a : $#$b)) ];
+    } elsif (UNIVERSAL::isa($a,'REF') && UNIVERSAL::isa($b,'REF')) {
+      ##-- case (\\?a,\\?b) -> recurse (copy)
+      my $c = uclobber($$a,$$b);
+      return \$c;
+      ##-- case (\$a,\$b) -> recurse (copy)
+    } elsif (UNIVERSAL::isa($a,'SCALAR') && UNIVERSAL::isa($b,'SCALAR')) {
+      my $c = uclobber($$a,$$b);
+      return \$c;
+    } else {
+      ##-- case unknown: -> $b
+      return $b;
+    }
+  };
+  $stash->set('uclobber'=>\&uclobber);
+
+  ##-- \%siterc_or_undef = sitevars() : load siterc.vars
+  my $sitevars = sub {
+    return $stash->get('sitevars_') if (defined($stash->{sitevars_}));
+    my ($fh);
+    if (!open($fh, "siterc.vars")) {
+      warn("open failed for siterc.vars: $!");
+      return undef;
+    }
+    my $site = {};
+    $site->{$_->[0]} = $_->[1]
+      foreach ( map {chomp; [split(/=/,$_,2)]} <$fh> );
+    close($fh);
+    $stash->set('sitevars_'=>$site);
+    return $site;
+  };
+  $stash->set('sitevars'=>$sitevars);
+[% END %]
+
+
+[%#------------------------------------------------------------
+  # defaults
+%]
+[% DEFAULT
+   defaults     = {}
+   dstar        = {}
+   dstar.corpus = dstar.corpus or "Corpus"
+   dstar.path   = dstar.path   or "/dstar/" _ dstar.corpus
+   root_title   = "D*/$dstar.corpus"
+   root_descr   = "D*/$dstar.corpus Search"
+   root_author  = "D* Developers"
+   root_time    = date.now
+   root_email   = "jurish@bbaw.de"
+   root_url     = defaults.root_url or dstar.www_url or "//" _ ENV.HTTP_HOST _ dstar.www_path
+   root_urldir  = root_url.remove('/+$') _ '/'
+   root_dir     = ""
+   osd_base     = defaults.osd_base or root_url
+   osd_url      = defaults.osd_url  or "$osd_base/osd.xml"
+   osd_tags     = defaults.osd_tags or "D* $dstar.corpus corpus"
+   ##-- osd_icon, osd_logo: use relative links
+   osd_icon     = defaults.osd_icon or "images/dstar-icon.png"
+   osd_logo     = defaults.osd_image or "images/dstar-logo.png"
+   help_url     = defaults.help_url or "//kaskade.dwds.de/~jurish/software/ddc/querydoc.html"
+   root_logo    = defaults.root_logo or "$osd_base/$osd_logo"
+   root_icon    = defaults.root_icon or "$osd_base/$osd_icon"
+   favicon_url  = defaults.favicon_url or root_icon
+   gen_label    = "D* OpenSearch API"
+   #query        = "Haus"
+   query        = ""
+   bquery       = encode_utf8("$query")
+   query_base   = defaults.query_base or "$osd_base/dstar.perl"
+   hits         = { hits_=>[] }
+   totalResults = hits.nhits_ or "0"
+   startIndex   = hits.start or "1"
+   itemsPerPage = hits.limit or "10"
+   isCountResult = hits.exists('counts_')
+   nHits        = isCountResult ? hits.counts_.size() : hits.hits_.size()
+   nHitsMax     = hits.dhits_.match('^.*~(\d+)$').0 or ""
+   ns_url       = "http://www.dwds.de/ns"
+   root_ns      = "$ns_url/xml/1.0"
+   meta_ns      = "$ns_url/meta/1.0"
+   rel_ns       = "$ns_url/rel/1.0"
+   textclass_ns = "http://www.deutschestextarchiv.de/doku/klassifikation"
+   ##
+   ##-- "Home" navigation buttons
+   home_url     = root_url
+   home_label   = "Home"
+   home_title   = "$root_title search home"
+   ##
+   ##-- "Project" navigation buttons
+   parent_url   = ""
+   parent_label = "Project Home"
+   parent_title = "$parent_label root"
+   ##
+   ##-- logo links (used by BLOCK headerLogo)
+   logo_src     = root_logo
+   logo_href    = root_url
+   logo_title   = home_title
+   logo_style   = ""
+   ##
+   ##-- "banner" stuff (used by BLOCK banner)
+   banner_src   = ""
+   banner_href  = parent_url
+   banner_title = parent_title
+   banner_style = ""
+   ##
+   ##-- acklnowledgements & DSGVO stuff
+   acknowledge  = defaults.acknowledge or ""
+   imprint_url  = defaults.imprint_url or (root_urldir _ "../imprint")
+   privacy_url  = defaults.privacy_url or (root_urldir _ "../privacy")
+   ##
+   ##-- dwds_piwik: default dwds.de piwik/matomo snippet for MACRO htmlCoda ?
+   dwds_piwik   = (ENV.DWDS_PIWIK != "" ? ENV.DWDS_PIWIK : 1)
+   ##
+   ##-- tcf stuff
+   tcf_lang     = "de"
+   tcf_pid      = root_url
+   tcf_corpus   = ""
+   tcf_tagset   = "stts"
+   ##
+   ##-- link stuff
+   rel_root     = "via"
+   rel_view     = "$rel_ns/view"
+   rel_htmlsrc  = "$rel_ns/htmlsrc"
+   rel_xmlsrc   = "$rel_ns/xmlsrc"
+   rel_snippet  = "alternate"
+   rel_bug      = "$rel_ns/bug"
+   ##
+   ##-- formatting stuff
+   text_field    = cgi.wf or "w";
+   title_attrs   = ['w','p','l'];
+   kwic_width    = cgi.ctx ||  8;
+   fmt		 = cgi.fmt || "html"; ##-- BUGGY: semicolons kill DEFAULT but break formatting
+   pretty        = cgi.pretty || 0;
+   shortbase_max_length = 32;
+   hit_thumbs    = 0;
+   ##
+   ##-- collection labels
+   collectionLabel = {}
+   #collectionLabel.dta = "DTA"
+   #collectionLabel.kern = "DWDS Kerncorpus"
+   #collectionLabel.kernbasis = "DWDS Kerncorpus-Basis"
+   #collectionLabel.spiegel = "Der Spiegel"
+   ##
+   ##-- query lizard stuff
+   defaults.lizard_enabled = 1
+   ##
+   ##-- time-series / histogram stuff
+   defaults.hist_enabled = dstar.hist_enabled
+   defaults.hist = {}
+   defaults.hist.pformat    = "svg"
+   defaults.hist.pformat_ie = "png"
+   defaults.hist.norm   = "date+class"
+   defaults.hist.single = 0
+   defaults.hist.grand  = 0
+   defaults.hist.xrange = "*:*"
+   defaults.hist.yrange = "0:*" 
+   defaults.hist.smooth = "none"
+   defaults.hist.grid   = 0
+   defaults.hist.points = 0
+   defaults.hist.gaps   = 0
+   defaults.hist.psize  = "840,480"
+   ##
+   ##-- csv output stuff
+   csvCommonCols = ['HitNo','Date','Genre','Bibl','URL']
+   ##
+   ##-- diacollo stuff (use relative links)
+   defaults.diacollo_enabled = dstar.diacollo_enabled
+   diacollo_logo    = defaults.diacollo_logo or root_dir _ "images/dstar-diacollo-logo.png"
+   diacollo_icon    = defaults.diacollo_icon or root_dir _ "images/diacollo-favicon.png"
+   diacollo_logo_href = logo_href
+   diacollo_logo_style = logo_style
+   ##
+   ##-- lexdb stuff
+   defaults.lexdb_enabled    = dstar.lexdb_enabled
+   lexdb_icon                = defaults.lexdb_icon    or favicon_url
+   ##
+   ##-- semcloud stuff
+   defaults.semcloud_enabled = dstar.semcloud_enabled
+%]
+
+
+[%# USE query_url = url(query_base, q=bquery, ctx=kwic_width) ##-- BAD: utf8 woes! %]
+[% SET query_uri = quri(query_base, {"q"=>bquery, "ctx"=>kwic_width}) %]
+[% SET query_url = query_uri %]
+
+[%#--- nav_* : navigation URLs; using query_base breaks navigation links on shibboleth proxy (2017-01-25) %]
+[% SET nav_base  = "dstar.perl" %]
+[% SET nav_uri   = quri(nav_base, {"q"=>bquery, "ctx"=>kwic_width}) %]
+[% SET nav_url   = nav_uri %]
+
+[% SET query_id  = query_url _ "/@" _ time_id %]
+[% SET lizard_url = uuri("lizard.perl") %]
+[% SET details_url = uuri("details.perl") %]
+[% SET hist_url = uuri("hist.perl") %]
+[% SET diacollo_url = uuri("diacollo/") %]
+[% SET lexdb_url = uuri("lexdb/") %]
+[% SET semcloud_url = uuri("semcloud/") %]
+
+[% BLOCK headerLogo %]
+[% IF logo_src %]<a href="[% logo_href | url %]" style="float:right;"><img class="logo" title="[% logo_title %]" style="[% logo_style | html %]" src="[% logo_src | url %]"/></a>[% END %]
+[% END %]
+
+[% BLOCK banner %]
+  [% IF banner_src %]
+    <a class="banner" style="[% banner_style | html %]" href="[% banner_href | url %]"><img style="[% banner_img_style | html %]" src="[% banner_src | url %]"/></a>
+  [% END %]
+[% END %]
+
+
+[% BLOCK hitPageSubheader -%]
+  [%- isCountResult ? "Rows " : "Hits " -%]
+  [%- startIndex %] - [% startIndex + nHits - 1 -%]
+  of
+  [%- IF nHitsMax and (startIndex + nHits - 1 < nHitsMax) %] at most [% END -%]
+  [% totalResults -%]
+[%- END %]
+
+[%
+  ##-- hit URL wrapper macro (override for special handling on a per-corpus basis, e.g. dta, dingler, grenzboten)
+  MACRO hitUrl BLOCK ;
+    hit.meta_.url.match('^\s*(?:https?:)?//') ? hit.meta_.url : '';
+  END ;
+
+  ##-- hit file-URL wrapper macro (override for special handling on a per-corpus basis, e.g. dta, dingler, grenzboten)
+  MACRO hitUrlFile BLOCK ;
+    hitUrl();
+  END ;
+
+  ##-- hit thumbnail URL wrapper macro (override for special handling on a per-corpus basis, e.g. dta, dingler, grenzboten)
+  MACRO hitUrlThumb BLOCK ;
+    hitUrl() ? (hitUrl() _ "/thumbnail.png") : '';
+  END ;
+%]
+
+[%##-- hit bibl macro (for fmt=html given variable $hit) %]
+[% MACRO htmlHitBibl BLOCK %]
+  [%- IF hit.url -%]<a href="[% hit.url | html %]">[%- END -%]
+    <span class="dtaHitFile">[[% hit.label %]]</span>: 
+  [%- IF hit.bibl -%][%- hit.bibl -%]
+  [%- ELSE -%]
+    <span class="hitAuthor">[%- hit.meta_.author | html -%]</span>,
+    <span class="hitTitle">[%- hit.meta_.title | html -%]</span>
+    ([%- hit.meta_.date_ | html -%])
+  [%- END -%]
+  [%- IF hit.matches.0.page && !hit.meta_.bibl.match('#page#') -%]
+    S. [%- hit.matches.0.page -%]
+  [%- END -%]
+  [%- IF hit.url -%]</a>[%- END -%]
+[% END %]
+
+
+[%##-- extra html header stuff (default: empty) %]
+[% MACRO htmlHeadExtra BLOCK %]
+  <!-- htmlHeadExtra -->
+[% END %]
+
+[%##-- html coda (default: dwds piwik/matomo js snippet) %]
+[% MACRO htmlCoda BLOCK %]
+  [% IF dwds_piwik +%]
+  	<!-- BEGIN dwds.de piwik/matomo code -->
+	<script>
+	  var _paq = window._paq || [];
+	  _paq.push(["setCookieDomain", ".dwds.de"]);
+	  _paq.push(["setDomains", [".dwds.de"]]);
+	  _paq.push(['disableCookies']);
+	  _paq.push(['trackPageView']);
+	  _paq.push(['enableLinkTracking']);
+	  (function() {
+	    var u="https://www.dwds.de/matomo/";
+	    _paq.push(['setTrackerUrl', u+'matomo.php']);
+	    _paq.push(['setSiteId', '1']);
+	    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+	    g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+	  })();
+	</script>
+	<noscript><p><img src="https://www.dwds.de/matomo/matomo.php?idsite=1&amp;rec=1" style="border:0;" alt="" /></p></noscript>
+	<!-- END dwds.de piwik/matomo code -->
+  [% END %]
+[% END %]
+
+
+
+##-- local overrides
+[% SET corpus_ttk = root_dir _ "corpus.ttk" %]
+[% SET custom_ttk = root_dir _ "custom.ttk" %]
+[% PROCESS $corpus_ttk %]
+[% PROCESS $custom_ttk %]
+
+##-- computed values
+[% SET
+    lizard_enabled    = defaults.lizard_enabled;
+    hist_enabled      = defaults.hist_enabled;
+    diacollo_enabled  = defaults.diacollo_enabled;
+    lexdb_enabled     = defaults.lexdb_enabled;
+    semcloud_enabled   = defaults.semcloud_enabled;
+    ##
+    lizard_enabled_b   = (lizard_enabled && lizard_enabled != "no");
+    hist_enabled_b     = (hist_enabled && hist_enabled != "no");
+    diacollo_enabled_b = (diacollo_enabled && diacollo_enabled != "no");
+    lexdb_enabled_b    = (lexdb_enabled && lexdb_enabled != "no");
+    semcloud_enabled_b    = (semcloud_enabled && semcloud_enabled != "no");
+%]
+
+##-- autocomplete
+[% IF lexdb_enabled && lexdb_enabled != "no" %]
+  [% SET autocomplete_options = {'source'=>"lexdb/suggest.perl?f=gs", 'minLength'=>2, 'delay'=>500}; %]
+[% END ##--/if lexdb_enabled %]
+
+[% END %]
+[%#--
+  # Local Variables:
+  # mode: CPerl
+  # coding: utf-8
+  # End:
+%]

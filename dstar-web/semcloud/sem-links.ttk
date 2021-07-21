@@ -1,0 +1,21 @@
+ <a class="navLink" href="[% root_url %]" title="[% root_title %] home">Home</a>
+[% IF !suppress_nav %]
+ <a class="navLink [% linkHomeClass %]" href="./index.perl" title="$ulabel home">SemCloud</a>
+ <span class="sbsep">&nbsp;</span>
+ <a class="navLink" href="[% utermsx('q'=>q) %]" title="$ulabel: view k-nearest terms">Terms</a>
+ <a class="navLink" href="[% udocsx('q'=>q) %]"  title="$ulabel: view k-nearest pages (&quot;documents&quot;)">Pages</a>
+ <a class="navLink" href="[% ucatsx('q'=>q) %]"  title="$ulabel: view k-nearest books (&quot;categories&quot;)">Books</a>
+ <span class="sbsep">&nbsp;</span>
+[% IF !suppress_raw %]
+  <a class="navLink" href="[% usemqx('q'=>q) %]" title="$ulabel: raw json data">Raw</a>
+[% END ##--/suppress_raw %]
+[% IF !suppress_dta %]
+ <a class="navLink" href="[% udtax %]" title="$ulabel: DTA(Q) search">DTA</a>
+[% END ##--/suppress_dta %]
+[% END ##--/suppress_nav %]
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+%]

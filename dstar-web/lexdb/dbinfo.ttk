@@ -1,0 +1,198 @@
+[% FILTER null %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "lex-common.ttk"
+%]
+[% SET html_title = root_title _ ": LexDB" %]
+[%# SET cdb.trace_sql = 1; %]
+[% PERL %]
+  #------------------------------------------------------------
+  # init
+
+  ##-- basics
+  my $cdb = $stash->get('cdb');
+  my $dbinfo = $cdb->dbinfo();
+  my ($tinfo,$cinfo) = @$dbinfo{qw(tables columns)};
+
+  ##-- html hacks
+  my ($tname,$t,$cname,$c);
+  while (($tname,$t) = each %$tinfo) {
+    while (($cname,$c) = each %{$t->{cols}}) {
+      $c->{cdoc} =~ s/ref\([^\)]*\)/ref(<a href=\"#tab_$c->{ref}\">$c->{ref}<\/a>)/ if ($c->{'ref'} && !$c->{'id'});
+    }
+  }
+  $stash->update({tinfo=>$tinfo,cinfo=>$cinfo});
+  #print STDERR Data::Dumper->Dump([$tinfo->{sent}],['tinfo_sent']);
+[% END %]
+[%#------------------------------------------------------------
+  # header
+%]
+[% END FILTER null %]
+[% cdb.cgi('header','-type'=>'text/html') %]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  [% PROCESS "../html-head.ttk"
+	cssfiles=["../dbcgi.css", "lexdb.css"]
+	jsfiles=["lexdb.js"]
+  %]
+</head>
+  <body>
+    <div class="outer">
+      [% PROCESS banner %]
+      <div class="headers">
+	<h1>[% html_title |html %]: Database Information</h1>
+	<div class="linkbar" style="padding:5px;">[% PROCESS linkBar %]</div>
+      </div>
+      [%#-- /div.headers %]
+      <div class="content">
+
+[%#------------------------------------------------------------
+  # section: contents
+%]
+<div class="section contentsSec">
+  <h2 onclick="\$('#contentsContent').toggle()" style="line-height:100%;"><a name="contents">Contents</a></h2>
+  <div id="contentsContent">
+    <ul>
+      <li><a href="#tables">Tables</a>
+        <ul>
+	  [% FOREACH tname IN tinfo.keys.sort; SET t=tinfo.$tname %]
+	    [% IF t.TABLE_TYPE == "TABLE" %]<li><a href="#tab_[% tname %]">[% tname %]</a></li>[% END %]
+	  [% END %]
+	</ul>
+      </li>
+      <li><a href="#views">Views</a>
+      <ul>
+	  [% FOREACH tname IN tinfo.keys.sort; SET t=tinfo.$tname %]
+	    [% IF t.TABLE_TYPE == "VIEW" %]<li><a href="#tab_[% tname %]">[% tname %]</a></li>[% END %]
+	  [% END %]
+      </ul>
+      </li>
+    </ul>
+  </div>
+</div>
+
+[%#------------------------------------------------------------
+  # section: globals
+%]
+[% USE date %]
+<div class="section globalsSec">
+  <h2 onclick="\$('#globalsContent').toggle()"><a name="globals">Globals</a></h2>
+  <table id="globalsContent" class="headerTable varTable"><tbody>
+    <tr><th>db_dsn:</th><td class="monospace">[% cdb.db_dsn %]</td></tr>
+    <tr><th>db_mtime:</th><td>[% date.format(cdb.mtime(), format=>"%F %R") %]</td></tr>
+    <tr><th>user_version:</th><td class="monospace">[% cdb.fetch1row_arrayref('pragma user_version').0 %]</td></tr>
+    [%#
+    <tr>
+      <th>statistics:</th>
+      <td><i>(disabled)</i></td>
+    </tr>
+    %]
+  </tbody></table>
+</div>
+<!--/div.section.globalsSec-->
+
+[%#------------------------------------------------------------
+  # section: tables
+%]
+<div class="section tablesSec">
+  <h2 onclick="\$('#tablesContent').toggle()"><a name="tables">Tables</a></h2>
+  <div id="tablesContent">
+    [% FOREACH tname IN tinfo.keys.sort ; SET t = tinfo.$tname %]
+      [% IF t.TABLE_TYPE == "TABLE" %]
+      <div class="subsection tableSec">
+        <h3><a name="tab_[% tname %]">[% tname %]</a><span class="tabDoc">: [% t.tdoc %]</h3>
+	<table id="tab_[% tname %]_content" class="dbViewTable tabinfoTable"><tbody>
+	  <tr><th class="ticCol">Column</th><th class="ticType">Type</th><th class="ticCmts">Comments</th></tr>
+	  [% FOREACH cname IN t.colnames ; SET c = t.cols.$cname %]
+	    <tr>
+	      <th class="ticCol tabinfoColName jc">[% HTML.escape(cname) %]</th>
+	      <td class="ticType jc">[% HTML.escape(c.type) %]</td>
+	      <td class="ticCmts jl">[% c.cdoc %]</td>
+	    </tr>
+	  [% END ##-- foreach c in t.colnames %]
+	</tbody></table>
+      </div>
+      [% END ##-- if t.TABLE_TYPE=="TABLE" %]
+    [% END ##-- foreach tname in tinfo.keys.sort %]
+  </div>
+</div>
+<!--/div.section.tablesSec-->
+
+[%#------------------------------------------------------------
+  # section: views
+%]
+<div class="section viewsSec">
+  <h2 onclick="\$('#viewsContent').toggle()"><a name="views">Views</a></h2>
+  <div id="viewsContent">
+    [% FOREACH tname IN tinfo.keys.sort; SET t = tinfo.$tname %]
+      [% IF t.TABLE_TYPE == "VIEW" %]
+      <div class="subsection tableSec">
+        <h3><a name="tab_[% tname %]">[% tname %]</a><span class="tabDoc">: [% t.tdoc %]</h3>
+	<table id="tab_[% tname %]_content" class="dbViewTable tabinfoTable"><tbody>
+	  <tr><th class="ticCol">Column</th><th class="ticType">Type</th><th class="ticCmts">Comments</th></tr>
+	  [% FOREACH cname IN t.colnames ; SET c = t.cols.$cname %]
+	    <tr>
+	      <th class="ticCol tabinfoColName jc">[% HTML.escape(cname) %]</th>
+	      <td class="ticType jc">[% HTML.escape(c.type) %]</td>
+	      <td class="ticCmts jl">[% c.cdoc %]</td>
+	    </tr>
+	  [% END ##-- foreach c in t.colnames %]
+	</tbody></table>
+      </div>
+      [% END ##-- if t.TABLE_TYPE=="TABLE" %]
+    [% END ##-- foreach tname in tinfo.keys.sort %]
+  </div>
+</div>
+<!--/div.section.tablesSec-->
+
+
+[%#------------------------------------------------------------
+  # footers
+%]
+      </div>
+      <!--/div:content-->
+      <div class="footer">
+	<table style="width:100%; border:0px; margin:0px;"><tbody>
+	  <tr>
+	    <td style="margin:0px; padding:0px;">[% PROCESS linkBar %]</td>
+	    <td align="right">
+	      <address><a href="mailto:$ucontact?subject=($ulabel $uversion)">$ucontact</a></address>
+	    </td>
+	  </tr>
+	</tbody></table>
+      </div>
+      <!--/div:footers-->
+      <tt>$ulabel $uversion / [% FILTER html %]$package version $version[% END %]</tt>
+    </div>
+    <!--/div:outer-->
+  </body>
+</html>
+
+[%#=====================================================================
+  # Blocks
+%]
+[% BLOCK linkBar %]
+[%# variables:
+  #   $ulocal   : current request uri
+%]
+  <a class="navLink" href="[% uview %]" title="LexDB View">View</a>
+  <span class="navSep">|</span>
+  <span class="infoXRefs">
+    <a class="textButtonSmall" href="#contents">Contents</a>
+    <a class="textButtonSmall" href="#globals">Globals</a>
+    <a class="textButtonSmall" href="#tables">Tables</a>
+    <a class="textButtonSmall" href="#views">Views</a>
+  </span>
+
+[% END ##-- BLOCK linkBar %]
+
+
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+%]

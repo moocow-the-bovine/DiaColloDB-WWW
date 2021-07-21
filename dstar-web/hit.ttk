@@ -1,0 +1,103 @@
+[% PERL %]
+  my $hit  = $stash->get('hit');
+  ##
+  my $base = $hit->{meta_}{basename};
+  if (!$base) {
+    $base = $hit->{meta_}{file_};
+    #$base =~ s/^.*__//;
+    $base =~ s/^.*\///;
+    $base =~ s/\..*$//;
+  }
+  $hit->{base} = $base;
+  ##
+  my ($bs) = $base;
+  $bs =~ s/^.*__//;
+  my $bl = $stash->get('shortbase_max_length');
+  if ($bl && $bl > 0 && length($bs) > $bl) {
+    $hit->{shortbase} = substr($bs,0,$bl).'...';
+  } else {
+    $hit->{shortbase} = $bs;
+  }
+  ##
+  my $id = (@{$hit->{meta_}}{qw(dtaid id idno uuid)})[0] // 0;
+  $hit->{id} = $id;
+  ##
+  my $page0 = $stash->get('hit.matches.0.page') || $stash->get('hit.meta_.page_') || $stash->get('hit.meta_.page_range') || 0;
+  $stash->set('hit.page', $page0);
+  $stash->set('hit.matches.0.page', $page0);
+  $stash->set('hit.bbox', join('_', map {$_->{coord}//''} grep {($_->{page}//'') eq $page0} @{$stash->get('hit.matches')}));
+  ##
+  my $bibl0 = $stash->get("hit.meta_.bibl") || $stash->get('hit.meta_.biblLex') || $stash->get('hit.meta_.scan_') || $stash->get('hit.meta_.orig_');
+  $bibl0 =~ s/\#page\#/$page0/g;
+  $stash->set('hit.bibl' => $bibl0);
+  ##
+  ##-- check whether we're using non-trivial match-ids
+  my $useMatchIds = $stash->get('useMatchIds');
+  if (($useMatchIds//'') eq '') {
+    $useMatchIds = grep {$_>0 && $_!=1} map {$_->{hl_}} map {@{$_->{ctx_}[1]}} @{$stash->get('hits.hits_')};
+    $stash->set('useMatchIds'=>$useMatchIds);
+  }
+  my $targetMatchId = $useMatchIds ? (sort {$a<=>$b} grep {$_} map {$_->{hl_}} @{$hit->{ctx_}[1]})[0] : undef;
+  ##
+  ##-- parse hit context into KWIC fields
+  if ($stash->get('parseKwic')) {
+    my $ctx  = $hit->{ctx_};
+    my $wf   = 'u';
+    $wf = $hit->{meta_}{indices_}[0] if (($ctx->[1][0]{$wf}||'') eq ''); ##-- hack for '#within file' queries
+    my (@lhs,@kw,@rhs,$w);
+    my $cref = \@lhs;
+    foreach $w ((map {ref($_) ? $_ : {$wf=>$_,ws=>1}} @{$ctx->[0]}), @{$ctx->[1]}, (map {ref($_) ? $_ : {$wf=>$_,ws=>1}} @{$ctx->[2]})) {
+      $w->{attrs} = {title=>join(', ', map {$_."=".($w->{$_}//'-')} @{$stash->get('title_attrs')})};
+      $w->{text}  = $w->{$wf};
+      if ($cref eq \@lhs && ($useMatchIds ? $w->{hl_}==$targetMatchId : $w->{hl_})) {
+	$cref = \@kw;
+      } elsif ($cref eq \@kw && @kw) {
+	$cref = \@rhs;
+      }
+      push(@$cref,$w);
+    }
+    ##
+    ##-- kwic: trim
+    my $width = $stash->get('kwic_width');
+    splice(@lhs,0,@lhs-$width,{text=>'...'})     if (@lhs > $width);
+    splice(@rhs,$width,@rhs-$width,{text=>'...'}) if (@rhs > $width);
+    if (!grep {$_->{ws}} (@lhs,@kw,@rhs)) {
+      $_->{ws}=1 foreach (@lhs,@kw,@rhs);
+    }				##-- hack for #within file queries
+    $hit->{kwic} = {'lhs'=>\@lhs, 'kw'=>\@kw, 'rhs'=>\@rhs};
+  }
+  ##
+  ##-- links: generic macro-expansion from template toolkit macros: see corpus.ttk, common.ttk
+  $hit->{url}     = $stash->get('hitUrl().trim()');
+  $hit->{urlFile} = $stash->get('hitUrlFile().trim()');
+  $hit->{thumb}   = $stash->get('hitUrlThumb().trim()');
+  ##
+  ##-- collection label
+  my $clabel = $stash->get('collectionLabel');
+  $hit->{collection} = $hit->{meta_}{collection} // '';
+  $hit->{collection} =~ s/^\s+//;
+  $hit->{collection} =~ s/\s+$//;
+  $hit->{collection} = $clabel->{$hit->{collection}} if (exists($clabel->{$hit->{collection}}));
+  ##
+  ##-- hit label
+  $hit->{label}  = join(":",
+			($hit->{collection} ? $hit->{collection} : qw()),
+			($hit->{base} // '???'),
+			($hit->{matches}[0]{page} ? $hit->{matches}[0]{page} : qw()),
+		       );
+  ##-- hit label (short)
+  $hit->{shortlabel}  = join(":",
+                             ($hit->{collection} ? $hit->{collection} : qw()),
+                             ($hit->{shortbase} // '???'),
+                             ($hit->{matches}[0]{page} ? $hit->{matches}[0]{page} : qw()),
+                            );
+  ##
+  ##-- hit node (ddc >= v2.2.8)
+  #$hit->{meta_}{node_} //= $hit->{node_} if ($hit->{node_});
+[% END %]
+[%#--
+  # Local Variables:
+  # mode: CPerl
+  # coding: utf-8
+  # End:
+--%]

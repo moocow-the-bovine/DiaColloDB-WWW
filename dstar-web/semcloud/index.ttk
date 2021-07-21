@@ -1,0 +1,60 @@
+[% FILTER null %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "sem-common.ttk"
+%]
+[% SET html_title = root_title _ ": SemCloud" %]
+[% END FILTER null %]
+[% cdb.cgi('header','-type'=>'text/html') %]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>[% html_title %]</title>
+  [% PROCESS "../html-head.ttk"
+	cssfiles=["../dbcgi.css", "semcloud.css"]
+	jsfiles=["semcloud.js"]
+	osd_url=""
+	autocomplete_options=0
+  %]
+</head>
+  <body>
+    <div class="outer">
+      <div class="headers">
+	<a href="[% root_url %]" style="float: right;"><img class="logo" src="[% root_logo | url %]"/></a>
+	<h1>[% html_title %]</h1>
+	<div class="linkbar" style="display:none">[% PROCESS "sem-links.ttk" %]</div>
+      </div>
+      <!--/div:headers-->
+      <div class="content">
+	<div class="section">
+	  <table class="indexLinkTable"><tbody>
+	    <tr>
+	      <th><a class="textButton" href="terms.perl">Terms</a></th>
+	      <td>k-best term clouds (content lemmata)</td>
+	    </tr>
+	    <tr>
+	      <th><a class="textButton" href="docs.perl">Pages</a></th>
+	      <td>k-best page clouds (&quot;documents&quot;)</td>
+	    </tr>
+	    <tr>
+	      <th><a class="textButton" href="cats.perl">Books</a></th>
+	      <td>k-best book clouds (&quot;categories&quot;)</td>
+	    </tr>
+	  </tbody></table>
+	</div>
+	<!--/div.section-->
+      </div>
+      <!--/div.content-->
+      [% PROCESS "../html-foot.ttk" suppress_nav=1 linkttk="sem-links.ttk" %]
+    </div>
+    <!--/div.outer-->
+  </body>
+</html>
+[%#--
+ ;; Local Variables:
+ ;; mode: nxml
+ ;; coding: utf-8
+ ;; End:
+%]

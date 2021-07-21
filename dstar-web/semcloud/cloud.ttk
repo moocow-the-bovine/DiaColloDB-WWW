@@ -1,0 +1,75 @@
+[% FILTER null %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "sem-common.ttk"
+%]
+[% SET html_title = root_title _ ": SemCloud: " _ uto %]
+[% END FILTER null %]
+[% cdb.cgi('header','-type'=>'text/html') %]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>[% html_title %]</title>
+  [% 
+     SET jqcss = ["jqcloud.css"];
+     IF color == "mono" ; SET jqcss=jqcss.merge(["jqmono.css"]) ; END
+  %]
+  [% PROCESS "../html-head.ttk"
+	cssfiles=jqcss.merge(["../dbcgi.css", "semcloud.css"])
+	jsfiles=["jqcloud.js", "semcloud.js"]
+	osd_url=""
+	autocomplete_options=0
+  %]
+  <script type="text/javascript">
+    /*-- local query parameters --*/
+    user_query = [% user_query.json() %];
+    
+    /*-- local constants --*/
+    dstar_url_base = [% dstar_url_base.json() %];
+    dtaq_url_base = [% dtaq_url_base.json() %];
+    semq_url_base = [% semq_url_base.json() %];
+    semq_url_local = [% semq_url_local.json() %];
+  </script>
+</head>
+  <body onload="cloudInit()">
+    <div class="outer">
+      <div class="headers" style="min-height:3em;">
+	<a href="[% root_url %]" style="float: right;"><img class="logo" src="[% root_logo | url %]"/></a>
+	<h1>[% html_title %]</h1>
+	<form id="qvForm" method="get">
+	  <input type="hidden" name="to" value="[% to %]"/>
+	  <table class="headerTable" style="padding-left:10px;"><tbody>
+	    <tr><th>query:</th><td><input type="text" name="q" size="80" value="[% HTML.escape(q) %]" title="User query: CONTENT_LEMMA | page=REGEX | book=REGEX ..." /></td></tr>
+	    <tr>
+	      <th>k-best:</th>
+	      <td>
+		<input type="text" name="k" size="10" value="[% HTML.escape(k) %]"/>
+		<input type="submit" name="_s" value="submit"/>
+	      </td>
+	    </tr>
+	</tbody></table>
+	</form>
+	<div class="linkbar" style="display:block">
+	  [% PROCESS "sem-links.ttk" %]
+	</div>
+      </div>
+      <div class="content">
+	<!--<b>URL:</b> <a id="rawLink" href="[% usemqx %]">[% HTML.escape(usemqx) %]</a>-->
+	<div id="termCloud" class="section" style="">
+	</div>
+	<!--/div.section-->
+      </div>
+      <!--/div.content-->
+      [% PROCESS "../html-foot.ttk" linkbar="" linkttk="" %]
+    </div>
+    <!--/div.outer-->
+  </body>
+</html>
+[%#--
+ ;; Local Variables:
+ ;; mode: nxml
+ ;; coding: utf-8
+ ;; End:
+%]

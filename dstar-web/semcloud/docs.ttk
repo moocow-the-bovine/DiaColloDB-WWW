@@ -1,0 +1,4 @@
+[% PROCESS cloud.ttk
+    to = "pages"
+    uto = "Pages"
+%]

@@ -1,0 +1,107 @@
+[%-
+ #------------------------------------------------------------
+ # globals
+ PROCESS "common.ttk" ;
+
+ DEFAULT csvCommonCols = ['HitNo','Date','Genre','Bibl','URL'];
+
+ IF fmt.match('kwic');
+   SET csvKwic = 1;
+   SET csvHitCols = ['LeftContext','Hit','RightContext'];
+ ELSE;
+   SET csvKwic = 0;
+   SET csvHitCols = ['Hit'];
+ END;
+-%]
+[%- PERL -%]
+  my ($csvSep,$csvQuote,$csvEOL);
+  if ($stash->get('fmt') =~ /csv/) {
+    ($csvSep,$csvQuote,$csvEOL) = (',','"',"\r\n");
+  } else {
+    ($csvSep,$csvQuote,$csvEOL) = ("\t",'',"\n");
+  }
+
+  my $csvEnquote = sub {
+    my $s = shift // '';
+    $s =~ s/(?:^\s+)|(?:\s+$)//g;
+    $s =~ s/[\t\r\n]+/ /g;
+    return $s if (!$csvQuote);
+    $s =~ s{\Q$csvQuote\E}{${csvQuote}${csvQuote}}g;
+    return $csvQuote.$s.$csvQuote;
+  };
+  $stash->set(csvEnquote=>$csvEnquote);
+
+  my $csvRow = sub {
+    return join($csvSep,
+		map {$csvEnquote->($_)}
+		map {UNIVERSAL::isa($_,'ARRAY') ? @$_ : $_}
+		@_
+	       ) . $csvEOL;
+  };
+  $stash->set(csvRow=>$csvRow);
+
+  my $csvKwicStr = sub {
+    return join('', map {($_->{ws} ? ' ' : '').($_->{text})} @{$_[0]});
+  };
+  $stash->set(csvKwicStr=>$csvKwicStr);
+
+  my $csvHit = sub {
+    my $hit = shift // $stash->get('hit');
+
+    ##-- set common csv cols
+    $hit->{csvHitNo} = $stash->get('csvHitNo') || $stash->get('startIndex') || "0";
+    $hit->{csvDate} = $hit->{meta_}{date_} || "0";
+    $hit->{csvGenre} = $hit->{meta_}{textClass} || '';
+    $hit->{csvGenre} =~ s/\:.*$//;
+    $hit->{csvBibl} = $hit->{meta_}{biblSig} || $hit->{meta_}{bibl} || '';
+
+    ##-- parse csv cols
+    my @row = qw();
+    foreach my $col (@{$stash->get('csvCommonCols')}) {
+      push(@row, ($hit->{"csv$col"}
+		  // $hit->{$col}
+		  // $hit->{lc($col)}
+		  // $hit->{meta_}{$col}
+		  // $hit->{meta_}{lc($col)}
+		 ));
+    }
+
+    if (defined($hit->{kwic})) {
+      push(@row, map {$csvKwicStr->($_)} @{$hit->{kwic}}{qw(lhs kw rhs)});
+    } else {
+      push(@row, ::contextString($hit,'',''));
+    }
+
+    $stash->set('csvHitNo' => $hit->{csvHitNo}+1);
+    return $csvRow->(@row);
+  };
+  $stash->set(csvHit=>$csvHit);
+
+[%- END -%]
+[%-
+IF isCountResult;
+    SET cols = ['count'];
+    SET nkeys = hits.counts_.0.size() - 1;
+    FOREACH i = [ 1 .. nkeys ] ;
+      cols.push("key" _ i);
+    END;
+    csvRow(cols);
+
+    FOREACH crow = hits.counts_ ;
+      csvRow(crow);
+    END ;
+ELSE;
+  csvRow( csvCommonCols.merge(csvHitCols) );
+  FOREACH hit = hits.hits_ ;
+    PROCESS "hit.ttk" parseKwic=csvKwic ;
+    csvHit( hit ) ;
+ END ;
+
+END ;
+-%]
+[%#--
+  # Local Variables:
+  # mode: cperl
+  # coding: utf-8
+  # End:
+--%]

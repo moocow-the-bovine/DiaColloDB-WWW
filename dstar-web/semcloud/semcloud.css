@@ -1,0 +1,93 @@
+/*======================================================================
+ * Overrides
+ */
+body,h1,h2,h3,h4,h5,h6,p,center,td,th,ul,dl,div {
+  font-family: Arial Unicode MS, Bitstream Vera Sans, Arial, Helvetica, sans-serif;
+}
+h2 { font-size: large; font-weight: bold; }
+
+/*-----------------------------------------------------------------
+ * headers
+ */
+table.headerTable, table.headerTable th, table.headerTable td {
+  border-collapse: collapse;
+  border-spacing: 0px 0px;
+  padding: 0px;
+}
+table.headerTable {
+  margin-left: 10px;
+}
+table.headerTable th {
+  padding-right: 4px;
+}
+
+/*-----------------------------------------------------------------
+ * index link-button table
+ */
+.indexLinkTable, .indexLinkTable th, .indexLinkTable td {
+  border: none;
+  vertical-align: text-top;
+}
+.indexLinkTable {
+  border: none;
+  border-spacing: 1em .2em;
+  margin-left: 0px;
+}
+.indexLinkTable th a {
+  display: block;
+  width: 100%;
+  font-variant: small-caps;
+  font-weight: bold;
+}
+
+/*-----------------------------------------------------------------
+ * linkbar(s)
+ */
+div.linkbar {
+  padding:5px;
+}
+.sbsep { 
+  padding: 2px;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+/*-----------------------------------------------------------------
+ * term cloud
+ */
+#termCloud {
+  width: 98%;
+  height: 400px;
+}
+
+div.jqcloud {
+  font-family: "Impact", "Helvetica", "Arial", sans-serif;
+}
+
+/*-----------------------------------------------------------------
+ * raw link
+ */
+b { color: #000099; }
+#rawLink {
+  font-family: monospace;
+}
+
+/*-----------------------------------------------------------------
+ * view table
+ */
+.dbViewTable tr:nth-child(even) { background-color: #ffffff; }
+.dbViewTable tr:nth-child(odd) { background-color: #ccccff; }
+.dbViewTable td { text-align: left; }
+
+
+/*-----------------------------------------------------------------
+ * generic clickables
+ */
+[onclick] { cursor:pointer; }
+[onclick]:hover {
+  background-color: #ffbb75;  /*light orange*/
+}
+
+.dtaTagDocList a[onclick] {
+  color: #000099;
+}

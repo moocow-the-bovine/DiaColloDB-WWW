@@ -1,0 +1,136 @@
+[% FILTER null %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk"
+%]
+[% DEFAULT
+   tcf_lang   = "de"
+   tcf_corpus = dstar.corpus
+%]
+[% PERL %]
+  ##-- prepare IDs
+  my $hits   = $stash->get('hits');
+  my @tokens = qw();
+  my @sents  = qw();
+  my ($ns,$nw) = (0,0);
+  my ($hit,$ctx,$s,$w);
+  my ($wf,$has_l,$has_p,$has_v)=qw();
+  foreach $hit (@{$hits->{hits_}}) {
+    $wf = ($hit->{ctx_}[1][0]{u}||'') ne '' ? 'u' : $hit->{meta_}{indices_}[0];
+    $hit->{matchids} = [];
+    foreach $ctx (@{$hit->{ctx_}}) {
+      next if (!$ctx || !@$ctx);
+      push(@sents, $s={id=>sprintf("s%x", ++$ns), tokids=>[]});
+      foreach $w (@$ctx) {
+        if (!ref($w)) {
+          $w = {'text'=>$w};
+	} else {
+	  $w->{text} = $w->{$wf};
+	}
+	$w->{id} = sprintf("w%x", ++$nw) if (!$w->{id});
+	push(@tokens, $w);
+	push(@{$s->{tokids}}, $w->{id});
+	push(@{$hit->{matchids}}, $w->{id}) if ($w->{hl_});
+	##
+	$has_l ||= defined($w->{l});
+	$has_p ||= defined($w->{p});
+	$has_v ||= defined($w->{v});
+      }
+    }
+    $hit->{matchids} = [map {$_->{id}} @{$hit->{matches}}];
+  }
+  $stash->set('tokens'=>\@tokens);
+  $stash->set('sents'=>\@sents);
+  $stash->set('props'=>{'has_l'=>$has_l, 'has_p'=>$has_p, 'has_v'=>$has_v});
+  ##
+  $stash->set('basename'=>\&File::Basename::basename);
+[% END ##--/perl %]
+[% END ##--/filter null %]
+[%#------------------------------------------------------------
+  # content
+%]
+<?xml version="1.0" encoding="UTF-8"?>
+<D-Spin xmlns="http://www.dspin.de/data" version="5">
+  <MetaData xmlns="http://www.dspin.de/data/metadata"/>
+  <TextCorpus xmlns="http://www.dspin.de/data/textcorpus" lang="[% tcf_lang %]">
+    [%#------------------------------------------------------------
+      # tokens
+    ~%]
+    <tokens>
+    [%- FOREACH w = tokens +%]
+      <token ID="[% w.id %]">[% w.text |xml %]</token>
+    [%- END ##-- /foreach w = tokens : token +%]
+    </tokens>
+    [%#------------------------------------------------------------
+      # sentences
+     ~%]
+    <sentences>
+    [%- FOREACH s = sents +%]
+      <sentence ID="[% s.id %]" tokenIDs="[% s.tokids.join(' ') %]"/>
+    [%- END ##--/foreach s = sents +%]
+    </sentences>
+    [%#------------------------------------------------------------
+      # postags
+    ~%]
+    [%~ IF props.has_p ~%]
+    <POStags tagset="[% tcf_tagset %]">
+    [%- FOREACH w = tokens +%]
+      [%- NEXT IF w.p == '' +%]
+      <tag tokenIDs="[% w.id %]">[% w.p | xml %]</tag>
+    [%- END ##-- /foreach w = tokens : tag +%]
+    </POStags>
+    [%- END ##--/if props.has_p +%]
+    [%#------------------------------------------------------------
+      # lemmas
+    ~%]
+    [%~ IF props.has_l ~%]
+    <lemmas>
+    [%- FOREACH w = tokens +%]
+      [%- NEXT IF w.l == '' +%]
+      <lemma tokenIDs="[% w.id %]">[% w.l | xml %]</lemma>
+    [%- END ##-- /foreach w = tokens : lemma +%]
+    </lemmas>
+    [%- END ##--/if props.has_l +%]
+    [%#------------------------------------------------------------
+      # orthography
+    ~%]
+    [%~ IF props.has_v ~%]
+    <orthography>
+    [%- FOREACH w = tokens +%]
+      [%- NEXT IF w.v == w.text +%]
+      <correction tokenIDs="[% w.id %]" operation="replace">[% w.v | xml %]</correction>
+    [%- END ##-- /foreach w = tokens : orthography +%]
+    </orthography>
+    [%- END ##--/if props.has_v +%]
+    [%#------------------------------------------------------------
+      # matches
+    ~%]
+    <matches>
+      <query type="ddc">[% query | xml %]</query>
+      <corpus name="[% (tcf_corpus || dstar.corpus) | xml %]" pid="[% (tcf_pid || root_url) | xml %]">
+	[%- FOREACH hit = hits.hits_ +%]
+        <item tokenIDs="[% hit.matchids.join(' ') %]">
+	  [%- FOREACH w = hit.matches +%]
+	  <target name="[% w.hl_ %]" value="[% w.id %]"/>
+	  [%- END ##--/foreach wid = hit.matchids +%]
+	  [%- FOREACH key = hit.meta_.keys.sort +%]
+	    [%- NEXT IF key.match('^(?:indices_|orig_|scan_|dtadir|corpus|textClassDWDS)$') +%]
+	    [%- NEXT IF key.match('^(?:orig|scan|page)_$') && !hit.meta_.$key +%]
+	    [%- SET value = hit.meta_.$key +%]
+	    [%- IF key == "title" ; value = value.replace(':.*$',''); END +%]
+	    [%- IF key == "file_" ; value = basename(value); END +%]
+	    <category name="text_[% key.replace('_$','') |xml %]" value="[% value |xml %]"/>
+	  [%- END ##--/foreach key = hit.meta_.keys.sort +%]
+        </item>
+	[%- END ##--/foreach hit = hits.hits_ +%]
+      </corpus>
+    </matches>
+  </TextCorpus>
+</D-Spin>
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]

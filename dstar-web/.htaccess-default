@@ -1,0 +1,4 @@
+DirectoryIndex dstar.perl
+AddHandler cgi-script .perl
+AddHandler fcgi-script .fcgi
+Options +ExecCGI +FollowSymLinks

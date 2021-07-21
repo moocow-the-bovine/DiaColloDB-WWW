@@ -1,0 +1,29 @@
+<div id="footers">
+  [% IF root_email %]
+  <div id="footer_sig">
+    <address><a href="mailto:[% root_email %]">[% root_email %]</a></address>
+  </div>
+  [% END %]
+  [% IF linkbar == "expand" %]
+  [% SET linkttk = root_dir _ "expand-links.ttk" %]
+  <div class="linkbar">[% PROCESS "$linkttk" noqform=1 %]</div>
+  [% ELSIF linkbar %]
+  [% SET linkttk = root_dir _ "html-links.ttk" noqform=1 %]
+  <div class="linkbar">[% PROCESS "$linkttk" %]</div>
+  [% ELSIF linkttk %]
+  <div class="linkbar">[% PROCESS "$linkttk" noqform=1 %]</div>
+  [% ELSE %]
+  <p/>
+  [% END %]
+</div>
+<span class="package">[% IF foot_package_text %][% foot_package_text %][% ELSE %][% gen_label |html %] version [% VERSION |html %][% END %]</span>
+<span class="elapsed">[% elapsed() |html %]&#xa0;sec</span>
+<span class="privacyLink"><a href="[% imprint_url %]">Imprint</a> · <a href="[% privacy_url %]">Privacy</a></span>
+[% IF acknowledge %]<div class="acknowledge">[% acknowledge %]</div>[% END %]
+[% htmlCoda() %]
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]

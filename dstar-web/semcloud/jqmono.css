@@ -1,0 +1,16 @@
+/* colors */
+
+div.jqcloud { color: #000; }
+div.jqcloud a { color: inherit; }
+div.jqcloud a:hover { color: #0df; }
+div.jqcloud a:hover { color: #0cf; }
+div.jqcloud span.w10 { color: #000; }
+div.jqcloud span.w9 { color: #555555; }
+div.jqcloud span.w8 { color: #6c6c6c; }
+div.jqcloud span.w7 { color: #7f7f7f; }
+div.jqcloud span.w6 { color: #8c8c8c; }
+div.jqcloud span.w5 { color: #999999; }
+div.jqcloud span.w4 { color: #a0a0a0; }
+div.jqcloud span.w3 { color: #a0a0a0; }
+div.jqcloud span.w2 { color: #a0a0a0; }
+div.jqcloud span.w1 { color: #a0a0a0; }

@@ -1,0 +1,17 @@
+[%# FILTER collapse %]
+[%
+ #------------------------------------------------------------
+ # globals
+ PROCESS "common.ttk"
+%]
+[%#-------------------------------------------------------------
+%]
+[% FOREACH w IN qxl ; w _ "\n"; END %]
+[%# END ##-- end filter collapse %]
+
+[%#--
+  # Local Variables:
+  # mode: CPerl
+  # coding: utf-8
+  # End:
+--%]

@@ -1,0 +1,45 @@
+[%- DEFAULT
+    root_dir = ""
+    osdlink  = 1
+    cssfiles = []
+    jsfiles  = []
+    jslocal  = ""
+    #use_jquery = 1
+    #use_jquery_ui = 1
+    #use_purl = 1
+    #use_dstar = 1
+    html_title = root_title
+-%]
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="ROBOTS"    content="NOINDEX, NOFOLLOW" />
+[% IF favicon_url %]
+  <link rel="icon"       type="image/png" href="[% favicon_url %]"/>
+[% END %]
+  <link rel="stylesheet" type="text/css" href="[% root_dir %]jquery-ui.css"/>
+  <link rel="stylesheet" type="text/css" href="[% root_dir %]dstar.css"/>
+[% FOREACH cssfile IN cssfiles %]
+  <link rel="stylesheet" type="text/css" href="[% cssfile |html %]"/>
+[% END ##--/FOREACH cssfile IN cssfiles %]
+[% IF osdlink and osd_url %]
+  <link rel="search" type="application/opensearchdescription+xml" href="[% osd_url %]" title="[% html_title |html %]" />
+[% END %]
+  <script src="[% root_dir %]jquery.js"></script>
+  <script src="[% root_dir %]jquery-ui.js"></script>
+  <script src="[% root_dir %]purl.js"></script><!-- url parser, for \$.url() -->
+  <script src="[% root_dir %]dstar.js?v=0.49"></script>
+[% FOREACH jsfile IN jsfiles %]
+  <script type="text/javascript" src="[% jsfile  |html %]"></script>
+[% END ##--/FOREACH jsfile IN jsfiles %]
+  <script type="text/javascript">
+[% IF autocomplete_options %]
+  autocomplete_options = [% to_json(autocomplete_options) %];
+[% END %]
+  [% jslocal %]
+  </script>
+  [% htmlHeadExtra() %]
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]

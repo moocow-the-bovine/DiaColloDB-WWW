@@ -1,0 +1,52 @@
+[% SET altfmt = (fmt == 'kwic' ? 'html' : 'kwic') %]
+[% SET ddcpar = (cgi.ddc ? ("&amp;ddc=" _ cgi.ddc) : "") %]
+[% IF !noaltfmt %]<a class="navLink" href="[% nav_url %][% ddcpar %]&amp;start=[% startIndex %]&amp;limit=[% itemsPerPage %]&amp;fmt=[% altfmt %]" title="View currently selected hits as [% altfmt |upper %]">~[% altfmt |upper %]</a>[% END %]
+[% IF !nohist && hist_enabled_b %]<a class="navLink" href="[% nav_url %][% ddcpar %]&amp;start=[% startIndex %]&amp;limit=[% itemsPerPage %]&amp;fmt=hist" title="View histogram of currently selected hits">~Hist</a>[% END %]
+[%#--- #%]
+[% IF !noaltfmt || !nohist %]| [% END %]
+[% IF parent_url %]<a class="navLink" href="[% parent_url | url %]" title="[% parent_title | html %]">[% ( parent_label || "Parent" ) | html %]</a>[% END %]
+[% IF home_label %]<a class="navLink" href="[% home_url | url %]" title="[% home_title | html %]">[% ( home_label || "Home" ) | html  %]</a>[% END %]
+[% IF lizard_enabled_b %]<a class="navLink" href="[% lizard_url(q=query) %]" title="[% root_title %] interactive term expansion">Query Lizard</a>[% END %]
+[% IF 0 && diacollo_enabled_b %]
+<a class="navLink" href="diacollo/" title="[% root_title %] collocations">DiaCollo</a>
+[% END ##--/diacollo_enabled %]
+[% IF 0 && lexdb_enabled_b %]
+<a class="navLink" href="lexdb/" title="[% root_title %] lexical database">LexDB</a>
+[% END ##--/lexdb_enabled %]
+|
+[% IF (startIndex - itemsPerPage) > 0 %]
+<a class="navLink" href="[% quri(nav_url _ ddcpar, {"start"=>(startIndex - itemsPerPage), "limit"=>itemsPerPage, "fmt"=>fmt, "hint"=>hint_prev}) %]">Previous</a>
+[% ELSE %]
+<span class="navLinkDisabled">Previous</span>
+[% END %]
+[% IF (startIndex + itemsPerPage) <= totalResults %]
+<a class="navLink" href="[% quri(nav_url _ ddcpar, {"start"=>(startIndex + itemsPerPage), "limit"=>itemsPerPage, "fmt"=>fmt, "hint"=>hint_next}) %]">Next</a>
+[% ELSE %]
+<span class="navLinkDisabled">Next</span>
+[% END %]
+|
+<a class="navLink" href="[% help_url %]" title="DDC query syntax">Help</a>
+<!--<b>Debug:</b> <span class="monospace">$xquery</span>-->
+<form method="GET" style="display:inline" class="qFormShort">
+  <input type="hidden" name="fmt" value="[% fmt |html %]"/>
+  <input type="hidden" name="corpus" value="[% cgi.corpus |html %]"/>
+  <input type="hidden" name="limit" value="[% itemsPerPage %]"/>
+  <input type="hidden" name="ctx" value="[% cgi.ctx |html %]"/>
+[% IF cgi.ddc %]<input type="hidden" name="ddc" value="[% cgi.ddc |html %]"/>[% END %]
+  <input class="ddcQuery" type="text" name="q" style="min-width:33%;" value="[% query |html %]"/>
+  <input type="submit" name="_s" value="submit"/>
+</form>
+<a class="navLink vqFormTgl" title="Show detailed query options" onclick="toggleVerboseQueryForm()">+</a>
+[% IF caberrLinkEnabled %]
+ <a class="navLink bCabErr" href="javascript:cabErrBtnClick()" title="Report a CAB error">CabErr</a>
+[% END %]
+[% IF !noqform %]
+<div class="section" style="display: none;" id="qFormVerbose">
+  [% PROCESS "html-qform.ttk" %]
+</div>
+[% END %]
+[%#
+ ;; Local variables:
+ ;; mode: nxml
+ ;; End:
+%]

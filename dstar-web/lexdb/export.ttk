@@ -1,0 +1,68 @@
+[% FILTER null %]
+[% 
+  #------------------------------------------------------------
+  # default parameter overrides
+  DEFAULT
+    cgi.fmt = fmt || "text"
+%]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "lex-common.ttk"
+%]
+[%# SET cdb.trace_sql = 1; %]
+[%
+  #------------------------------------------------------------
+  # local defaults
+  DEFAULT
+    select  = "w,p,l,f"
+    from    = "lex"
+    where   = ""
+    groupby = ""
+    orderby = "" #f desc
+    fmt     = "text"
+    offset  = 0
+    limit   = 10
+    data    = cdb.getall("select"=>select, "from"=>from, "where"=>where, "groupby"=>groupby, "orderby"=>orderby, "offset"=>offset, "limit"=>limit, "hashrows"=>0)
+    sql     = data.sql
+    ulocal  = cdb.uuri("view.perl")
+%]
+[% USE JSON::Escape(pretty=>1) %][%#-- json() pseudo-method %]
+[% PERL %]
+  #------------------------------------------------------------
+  # post-init
+  my ($cdb,$data) = map {$stash->get($_)} qw(cdb data);
+
+  ##-- nrows
+  $stash->set('nrows' => $cdb->nrows(%{$data->{args}},sql=>undef))
+    if (!defined($stash->get('nrows')) || $stash->get('nrows') eq '');
+
+  $data->{nrows} = $stash->get('nrows');
+[% END %]
+[%#------------------------------------------------------------
+  # header
+%]
+[% END FILTER null %]
+[% IF fmt == "json"%][% 
+    cdb.cgi('header','-type'=>'application/json', charset=>'utf-8') %][% 
+    data.json() %][% 
+   ELSE %][%
+    cdb.cgi('header','-type'=>'text/plain', charset=>'utf-8') %][% PERL %]
+      my $data = $stash->get('data');
+      print
+        (##--header
+	"%%SQL: $data->{sql}\n",
+	"%%NROWS: $data->{nrows}\n",
+	"%%NAMES: ", join(" ", map {"$_"} @{$data->{names}}), "\n",
+	##-- data
+	map {join("\t", @$_)."\n"} @{$data->{rows}},
+	);
+    [% END
+%][% END %]
+
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+%]

@@ -1,0 +1,138 @@
+[% FILTER null %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "sem-common.ttk"
+%]
+[% SET cdb.trace_sql = 0 %]
+[% PERL %]
+  ##-- for use with pure-cgi "semq.perl"
+  my $is_fcgi = 1;
+  if (!$INC{'DocClassify.pm'} || !$INC{'PDL.pm'}) {
+    push(@INC,
+         qw(.),
+         qw(/home/moocow/local/pdl/lib/perl5 /home/moocow/local/pdl/lib/perl),
+         qw(/home/moocow/work/diss/perl/MUDL),
+        );
+    eval "use DocClassify; use PDL; DocClassify::Logger->ensureLog(); 1;"
+      or die("$0: failed to load prerequisites DocClassify, PDL: $@");
+    $is_fcgi = 0;
+  }
+  no warnings qw(uninitialized);
+  PDL->import() if (!UNIVERSAL::can( __PACKAGE__ , "pdl" ));
+
+  ##-- get model configuration
+  my $cdb    = $stash->get('cdb');
+  my $mapfile = $stash->get('mapfile');
+  my $mapdir  = $stash->get('mapdir');
+
+  ##-- setup/load map data
+  my $map = $::map;
+
+  if ($mapdir && -e $mapdir) {
+    ##-- load map data (NEW: directory mmap)
+    $map = DocClassify::Mapper->loadDir($mapdir, verboseIO=>0, mode=>'dir', mmap=>1, ReadOnly=>1)
+      or die("$0: Mapper->loadDir() failed for '$mapdir': $!");
+    $map->{label} = $mapdir;
+    undef $::map;
+  }
+  elsif($mapfile && (!$map || ($map->{mtime}//0) < ((stat $mapfile)[9]//0) || ($map->{label}//'') ne $mapfile)) {
+    ##-- load map data (OLD: persistent file)
+    $stash->set('mapdir'=>undef);
+    $cdb->trace1("(re-)loading mapper data from file $mapfile (old mtime=".($map->{mtime}//0)."; new mtime=".((stat $mapfile)[9]//0).")");
+
+    ##-- load
+    $map = DocClassify::Mapper->loadFile($mapfile, verboseIO=>1)
+      or die("$0: Mapper->loadFile() failed for '$mapfile': $!");
+    $map->{verbose} = 1;
+
+    ##-- timestamp
+    $map->{mtime} = (stat $mapfile)[9]; ##-- last modify time
+
+    ##-- export global
+    $map->{label} = $mapfile;
+    $::map = $map;
+  }
+
+  ##-- get query options
+  my %qo = map {($_=>$stash->get($_))} qw(to k q);
+  $qo{k} = $1 if ($qo{q} =~ s/\s*\@\s*(\d+)\s*$//); ##-- parse 'TERM@COUNT' queries from ddc
+
+  ##-- translate 'mapto' options
+  $qo{to} ||= 'cats';
+  if     ($qo{to} =~ /^[dp]/)  { $qo{to}='docs'; } ##-- to=docs|pages
+  elsif  ($qo{to} =~ /^[cbv]/) { $qo{to}='cats'; } ##-- to=cats|books|volumes
+  elsif  ($qo{to} =~ /^[twl]/) { $qo{to}='terms'; } ##-- to=terms|words|lemmata
+  else {
+    die("unknown map target type '$qo{to}'");
+  }
+  #print STDERR "to=$qo{to} ; k=$qo{k} ; q=$qo{q}\n"; ##--DEBUG
+
+  ##-- parse query
+  my $q_sig = $map->querySignature($qo{q});
+  my $kbest = $map->mapQuery($q_sig, %qo,mapto=>$qo{to});
+
+  ##-- translate labels
+  if ($qo{to} =~ /^[dpcbv]/i) {
+    my ($lab);
+    foreach (@$kbest) {
+      ($lab = File::Basename::basename($_->{label})) =~ s/\.\D.*$//;
+      #$lab =~ s/\.(\d+)$/?p=$1/;
+      $_->{label} = $lab;
+    }
+  }
+
+  ##-- translate distances (Boltzmann)
+  my ($b,$beta) = map {$stash->get($_)} qw(b beta);
+  my $dpdl = pdl([map {$_->{dist}} @$kbest]);
+  my $dsim = pdl($b)->pow($dpdl*$beta);
+  $dsim   /= $dsim->where($dsim->isfinite)->sumover;
+  foreach (0..$#$kbest) {
+    $kbest->[$_]{sim} = $dsim->at($_);
+  }
+
+  $stash->set('kbest'=>$kbest);
+
+  ##-- recode labels (fcgi mode only)
+  $stash->set('is_fcgi'=>$is_fcgi);
+  if ($is_fcgi) {
+    foreach (@$kbest) {
+      $_->{id} = $cdb->encode_utf8($_->{id});
+      $_->{label} = $cdb->encode_utf8($_->{label});
+    }
+  }
+[% END ##-- /perl %]
+[% END FILTER null %]
+[% IF fmt == "ddc" || fmt == "xlist" || fmt == "xl"
+  #------------------------------------------------------------
+  # dump: ddc
+  %][%
+    cdb.cgi('header', '-type'=>'text/plain');
+    FOREACH e IN kbest;
+      e.label _ "\n";
+    END;
+%][% ELSIF fmt == "text" || fmt == "txt" || fmt == "csv" || fmt == "dat"
+  #------------------------------------------------------------
+  # dump: text
+  %][%
+    cdb.cgi('header', '-type'=>'text/plain', 'X-column-names'=>'id label sim dist');
+    FOREACH e IN kbest ;
+      row = [e.id, e.label, e.sim, e.dist];
+      row.join("\t") _ "\n";
+    END
+%][% ELSE
+  #------------------------------------------------------------
+  # dump: json
+  %][%
+    cdb.cgi('header','-type'=>'application/json');
+    cdb.to_json( kbest, {"utf8"=>0,"pretty"=>1} );
+%][%
+  END ##-- fmt
+%]
+[%#--
+ ;; Local Variables:
+ ;; mode: cperl
+ ;; coding: utf-8
+ ;; End:
+%]
+

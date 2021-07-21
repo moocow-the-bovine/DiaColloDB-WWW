@@ -1,0 +1,31 @@
+[%# File: lex-links.ttk %]
+[%# variables:
+  #   $ulocal   : current request uri
+%]
+[% IF parent_url %]<a class="navLink" href="[% parent_url | url %]" title="[% parent_title | html %]">[% ( parent_label || "Parent" ) | html %]</a>[% END %]
+[% IF home_label %]<a class="navLink" href="[% home_url | url %]" title="[% home_title | html %]">[% ( home_label || "Home" ) | html  %]</a>[% END %]
+<a class="navLink" href="[% uinfo %]" title="LexDB Database Information">Info</a> 
+|
+<a class="navLink" href="[% ulocal({'select'=>select, 'from'=>from, 'where'=>where, 'groupby'=>groupby, 'orderby'=>orderby, 'offset'=>0, 'limit'=>limit, 'nrows'=>nrows}) %]" title="View first rows">First</a>
+[% IF offset > 0 %]
+<a class="navLink" href="[% ulocal({'select'=>select, 'from'=>from, 'where'=>where, 'groupby'=>groupby, 'orderby'=>orderby, 'offset'=>(offset-limit >= 0 ? (offset-limit) : 0), 'limit'=>limit, 'nrows'=>nrows}) %]" title="View previous rows">&lt;&lt;&#xa0;Prev</a>
+[% ELSE %]
+<span class="navLinkDisabled">&lt;&lt;&#xa0;Prev</span>
+[% END %]
+[% IF data.rows.size >= limit %]
+<a class="navLink" href="[% ulocal({'select'=>select, 'from'=>from, 'where'=>where, 'groupby'=>groupby, 'orderby'=>orderby, 'offset'=>(offset+limit), 'limit'=>limit, 'nrows'=>nrows}) %]" title="View next rows">Next&#xa0;&gt;&gt; </a>
+[% ELSE %]
+<span class="navLinkDisabled">Next&#xa0;&gt;&gt;</span>
+[% END %]
+|
+<a class="navLink" href="[% uexport({'select'=>select, 'from'=>from, 'where'=>where, 'groupby'=>groupby, 'orderby'=>orderby, 'limit'=>limit, 'fmt'=>'text'}) %]" title="Export dataset as tab-separated text">Tabs</a>
+<a class="navLink" href="[% uexport({'select'=>select, 'from'=>from, 'where'=>where, 'groupby'=>groupby, 'orderby'=>orderby, 'limit'=>limit, 'fmt'=>'json'}) %]" title="Export dataset as JSON">JSON</a>
+|
+<a class="navLink" href="http://www.sqlite.org/lang.html" title="SQL as understood by SQLite (exeternal link)">Help</a>
+
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+%]

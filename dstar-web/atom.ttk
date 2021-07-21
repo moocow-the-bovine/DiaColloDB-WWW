@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+[%# FILTER collapse %]
+[%
+  #------------------------------------------------------------
+  # globals
+  PROCESS "common.ttk"
+%]
+[%#------------------------------------------------------------
+  # header
+  #     xmlns:dc="http://purl.org/dc/elements/1.1/"
+  #     xmlns:dcterms="http://purl.org/dc/terms/"
+  #     xmlns:media="http://search.yahoo.com/mrss/"
+%]
+[% SET time_atom = date.format(hits_timestamp(hits), format=>"%Y-%m-%dT%H:%M:%SZ", gmt=>1) %]
+ <feed xmlns="http://www.w3.org/2005/Atom" 
+       xmlns:os="http://a9.com/-/spec/opensearch/1.1/"
+       xmlns:dstar="[% root_ns %]"
+       >
+   <id>[% fquri(query_uri) | xml %]</id>
+   <title>[% (root_descr _ ': "' _ query _ '"') | xml %]</title> 
+   <updated>[% time_atom %]</updated>
+   <author>	
+     <name>[% root_author | xml %]</name>
+     <uri>[% root_url | xml %]</uri>
+   </author> 
+   <generator version="[% VERSION %]">[% gen_label | xml %]</generator>
+   <link href="[% root_url %]"/>
+   <icon>[% root_icon | url | xml %]</icon>
+   <logo>[% logo_src | url | xml %]</logo>
+   <os:totalResults>[% totalResults %]</os:totalResults>
+   <os:startIndex>[% startIndex %]</os:startIndex>
+   <os:itemsPerPage>[% itemsPerPage %]</os:itemsPerPage>
+   <os:Query role="request" searchTerms="[% query | xml %]" startIndex="[% startIndex %]"/>
+[%# ------------------------------------------------------------
+    links
+%]
+   <link rel="os:search" type="application/opensearchdescription+xml" href="[% osd_url | url %]"/>
+   <link rel="self"
+	 type="application/atom+xml"
+	 href="[% fquri(query_uri, {'start'=>startIndex, 'limit'=>itemsPerPage, 'hint'=>hint_self, 'fmt'=>'atom'}) |xml %]"/>
+   <link rel="alternate"
+	 type="text/html"
+	 href="[% fquri(query_uri, {'start'=>startIndex, 'limit'=>itemsPerPage, 'hint'=>hint_self, 'fmt'=>'html'}) |xml %]"/>
+   <link rel="alternate"
+	 type="application/rss+xml"
+	 href="[% fquri(query_uri, {'start'=>startIndex, 'limit'=>itemsPerPage, 'hint'=>hint_self, 'fmt'=>'rss'}) |xml %]"/>
+   <link rel="first"
+	 type="application/atom+xml"
+	 href="[% fquri(query_uri, {'start'=>startIndex, 'limit'=>itemsPerPage, 'fmt'=>'rss'}) |xml %]"/>
+[% IF (startIndex - itemsPerPage) > 0 %]
+   <link rel="previous"
+	 type="application/atom+xml"
+	   	href="[% fquri(query_uri, {'start'=>(startIndex-itemsPerPage), 'limit'=>itemsPerPage, 'hint'=>hint_prev, 'fmt'=>'atom'}) |xml %]"/>
+[% END %]
+[% IF (startIndex + itemsPerPage) <= totalResults %]
+   <link rel="next"
+	 type="application/atom+xml"
+	 href="[% fquri(query_uri, {'start'=>(startIndex+itemsPerPage), 'limit'=>itemsPerPage, 'hint'=>hint_next, 'fmt'=>'atom'}) |xml %]"/>
+[% END %]
+   <link rel="last"
+	 type="application/atom+xml"
+	 href="[% fquri(query_uri, {'start'=>(totalResults-itemsPerPage), 'limit'=>itemsPerPage, 'fmt'=>'atom'}) |xml %]"/>
+[%# ------------------------------------------------------------
+    hits
+%]
+[% hit_i = 0 %]
+[% FOREACH hit = hits.hits_ %]
+[% PROCESS "hit.ttk" %]
+[% DEFAULT hit.url = "file://" _ hit.label.replace(":","/")  %]
+<entry>
+ <id>[% fquri(hit.url) | xml %]</id>
+ <title>[% hit.meta_.title | xml %]</title>
+ <updated>[% date.format(hit_timestamp(hit), format=>"%Y-%m-%dT%H:%M:%SZ", gmt=>1) %]</updated>
+[%#--------
+  # metadata: dstar:*
+%]
+ <author><name>[% hit.meta_.author | xml %]</name></author>
+ [% FOREACH key IN hit.meta_.keys.sort %]
+   [% NEXT IF key.match('^(?:indices)_$') %]
+   [% NEXT IF key.match('^(?:orig|scan|page)_$') && !hit.meta_.$key %]
+   <dstar:[% key %]>[% hit.meta_.$key |xml %]</dstar:[% key %]>
+ [% END ##--/foreach key in hit.meta_.keys.sort %]
+ <content type="xhtml">
+   <div xmlns="http://www.w3.org/1999/xhtml">
+     [% contextString(hit, '<b>', '</b>', { escape=>'xml' }) %]
+   </div>
+ </content>
+[%#-------
+  # metadata: dcterms:*
+ %]
+ [%# <dc:creator>[ % hit.title | xml % ]</dc:title> #-- works (but obsolete?) %]
+ [%# <dcterms:title>[ % hit.title | xml % ]</dcterms:title> #-- does NOT work (but allegedly supported) %]
+</entry>
+[% hit_i = hit_i + 1 %]
+[% END ##-- end hit loop %]
+</feed>
+[%# END ##-- end collapse %]
+[%#--
+  # Local Variables:
+  # mode: nxml
+  # coding: utf-8
+  # End:
+--%]
